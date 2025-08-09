@@ -53,35 +53,62 @@ const gameData = [
     text: `<h2>Scenario 1: In Scope?</h2>
     <p>NexCo, a US-headquartered multinational, had consolidated revenue of €900m in 2022 and €1.05bn in 2023. It's now 2024. Are you in scope for Pillar 2?</p>`,
     choices: [
-      { text: "Yes – the group exceeds €750m revenue threshold", feedback: "Correct. Two consecutive years above €750m means NexCo is in scope for Pillar 2 from 2024.", next: 1 },
-      { text: "No – 2022 was below €750m so not in scope yet", feedback: "Incorrect. The OECD rules (and Australia's implementation) look at either of the two preceding fiscal years. 2023’s €1.05bn triggers 2024 scope.", next: 1 }
+      { text: "Yes – the group exceeds €750m revenue threshold", feedback: "Correct. Two consecutive years above €750m means NexCo is in scope for Pillar 2 from 2024. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 1 },
+      { text: "No – 2022 was below €750m so not in scope yet", feedback: "Incorrect. The OECD rules (and Australia's implementation) look at either of the two preceding fiscal years. 2023’s €1.05bn triggers 2024 scope. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 1 }
     ]
   },
   {
     text: `<h2>Scenario 2: QDMTT in Australia</h2>
     <p>NexCo Australia earns AUD 120m in FY2024, but after R&D credits and IP deductions, its ETR is 11%. Australia has implemented a Qualified Domestic Minimum Top-up Tax (QDMTT). What do you do?</p>`,
     choices: [
-      { text: "File a QDMTT return and pay top-up tax in Australia", feedback: "Correct. Paying QDMTT locally prevents other jurisdictions from collecting the top-up tax.", next: 2 },
-      { text: "Wait for US to implement IIR", feedback: "Risky. Delay may leave you exposed to UTPR from other countries, as US IIR is not yet in force.", next: 2 },
-      { text: "Ignore – Australia’s headline rate is already high", feedback: "Incorrect. Pillar 2 uses effective tax rate; here it's 11%, so QDMTT applies.", next: 2 }
+      { text: "File a QDMTT return and pay top-up tax in Australia", feedback: "Correct. Paying QDMTT locally prevents other jurisdictions from collecting the top-up tax. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 2 },
+      { text: "Wait for US to implement IIR", feedback: "Risky. Delay may leave you exposed to UTPR from other countries, as US IIR is not yet in force. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 2 },
+      { text: "Ignore – Australia’s headline rate is already high", feedback: "Incorrect. Pillar 2 uses effective tax rate; here it's 11%, so QDMTT applies. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 2 }
     ]
   },
   {
     text: `<h2>Scenario 3: UTPR Risk</h2>
     <p>NexCo Singapore earns profits taxed at an ETR of 5%. Singapore has no QDMTT. The US hasn’t implemented IIR. Can Australia apply UTPR to NexCo's Australian operations?</p>`,
     choices: [
-      { text: "Yes – Australia can deny deductions under UTPR rules", feedback: "Correct. Australia's UTPR allows deduction denial to collect the top-up tax where no other Pillar 2 mechanism applies.", next: 3 },
-      { text: "No – UTPR only applies to low-taxed Australian profits", feedback: "Incorrect. UTPR can apply to group profits earned anywhere if not taxed to the minimum level.", next: 3 }
+      { text: "Yes – Australia can deny deductions under UTPR rules", feedback: "Correct. Australia's UTPR allows deduction denial to collect the top-up tax where no other Pillar 2 mechanism applies. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 3 },
+      { text: "No – UTPR only applies to low-taxed Australian profits", feedback: "Incorrect. UTPR can apply to group profits earned anywhere if not taxed to the minimum level. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 3 }
+    ]
+  },
+  {
+    text: `<h2>Scenario 4: IIR Application</h2>
+    <p>NexCo has a subsidiary in a low-tax jurisdiction with undertaxed profits. As the ultimate parent entity in the US, but with Australian operations, how does the Income Inclusion Rule (IIR) apply?</p>`,
+    choices: [
+      { text: "Apply IIR at the Australian level to include the low-taxed income", feedback: "Correct. Under Australia's IIR, the top-up tax is allocated to Australian entities if not captured elsewhere. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 4 },
+      { text: "Ignore IIR since the parent is in the US", feedback: "Incorrect. If the US hasn't implemented IIR, Australia can apply it as a secondary rule. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 4 }
+    ]
+  },
+  {
+    text: `<h2>Scenario 5: Transitional Safe Harbour</h2>
+    <p>For FY2024, NexCo qualifies for the Transitional CbCR Safe Harbour in Australia. What does this mean for compliance?</p>`,
+    choices: [
+      { text: "Reduced top-up tax to zero if conditions met using CbC reporting data", feedback: "Correct. The Transitional CbCR Safe Harbour simplifies calculations and reduces top-up tax to zero for qualifying jurisdictions. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 5 },
+      { text: "No filing required at all", feedback: "Incorrect. Even under safe harbour, GloBE Information Returns may still be needed. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 5 }
+    ]
+  },
+  {
+    text: `<h2>Scenario 6: Filing Obligations</h2>
+    <p>NexCo has no top-up tax liability but is in scope. What filing is required in Australia?</p>`,
+    choices: [
+      { text: "File GloBE Information Return, IIR/UTPR return, and DMT return", feedback: "Correct. Returns must be filed even with no liability. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 6 },
+      { text: "No filing if no tax due", feedback: "Incorrect. Compliance requires filing regardless of liability. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]", next: 6 }
     ]
   },
   {
     text: `<h2>Debrief & Cheat Sheet</h2>
     <p>Well done! Here’s your Pillar 2 summary:</p>
     <ul>
-      <li><strong>Scope:</strong> Applies to MNEs with €750m+ consolidated revenue in at least one of the two preceding fiscal years.</li>
-      <li><strong>QDMTT:</strong> Lets Australia collect top-up tax locally, preventing other countries from collecting it.</li>
-      <li><strong>UTPR:</strong> Allows deduction denial to collect top-up tax if IIR or QDMTT hasn’t addressed low-taxed profits.</li>
-      <li><strong>Effective Tax Rate:</strong> Based on covered taxes / Pillar 2 income – not just headline rate.</li>
+      <li><strong>Scope:</strong> Applies to MNEs with €750m+ consolidated revenue in at least two of the four preceding fiscal years. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]</li>
+      <li><strong>QDMTT:</strong> Lets Australia collect top-up tax locally, preventing other countries from collecting it. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]</li>
+      <li><strong>UTPR:</strong> Allows deduction denial to collect top-up tax if IIR or QDMTT hasn’t addressed low-taxed profits. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]</li>
+      <li><strong>Effective Tax Rate:</strong> Based on covered taxes / Pillar 2 income – not just headline rate. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]</li>
+      <li><strong>IIR:</strong> Includes low-taxed income in the parent's taxable income. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]</li>
+      <li><strong>Safe Harbours:</strong> Transitional CbCR Safe Harbour reduces compliance for qualifying jurisdictions. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]</li>
+      <li><strong>Filing:</strong> GloBE Information Return and tax returns required even if no liability. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024]</li>
     </ul>
     <p>Replay anytime to test different decisions.</p>`
   }
