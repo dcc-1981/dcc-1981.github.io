@@ -1,196 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pillar 2 Pursuit: Mastering Australia’s Global Minimum Tax</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      color: #333;
-      margin: 0;
-      padding: 10px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-    .container {
-      max-width: 100%;
-      width: 90vw;
-      background: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    h1 {
-      text-align: center;
-      color: #005566;
-      font-size: 1.5rem;
-      margin: 0 0 10px;
-    }
-    .question-card {
-      margin: 15px 0;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-    }
-    .question-card p {
-      font-size: 1rem;
-      margin: 0 0 10px;
-    }
-    button {
-      background: #005566;
-      color: #fff;
-      border: none;
-      padding: 12px;
-      margin: 5px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 1rem;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    button:hover {
-      background: #003d4a;
-    }
-    .feedback {
-      display: none;
-      margin-top: 10px;
-      padding: 10px;
-      border-radius: 5px;
-      font-size: 0.9rem;
-    }
-    .correct {
-      background: #d4edda;
-      color: #155724;
-    }
-    .incorrect {
-      background: #f8d7da;
-      color: #721c24;
-    }
-    .progress {
-      margin: 10px 0;
-      text-align: center;
-    }
-    .progress-bar {
-      width: 100%;
-      height: 20px;
-      background: #ddd;
-      border-radius: 5px;
-      overflow: hidden;
-    }
-    .progress-bar-fill {
-      height: 100%;
-      background: #005566;
-      border-radius: 5px;
-      transition: width 0.3s ease;
-    }
-    @media (max-width: 600px) {
-      h1 { font-size: 1.2rem; }
-      .question-card p { font-size: 0.9rem; }
-      button { font-size: 0.9rem; padding: 10px; }
-      .feedback { font-size: 0.8rem; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pillar 2 Pursuit: Mastering Australia’s Global Minimum Tax</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f4f4f4;
+    color: #333;
+    margin: 0;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .container {
+    max-width: 100%;
+    width: 90vw;
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  h1 {
+    text-align: center;
+    color: #005566;
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+  }
+  .question-card {
+    margin: 15px 0;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  .question-card p {
+    font-size: 1rem;
+    margin-bottom: 10px;
+  }
+  button {
+    background: #005566;
+    color: #fff;
+    border: none;
+    padding: 12px;
+    margin: 5px 0;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  button:hover:not(:disabled) {
+    background: #003d4a;
+  }
+  button:disabled {
+    background: #999;
+    cursor: not-allowed;
+  }
+  .feedback {
+    display: none;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 0.9rem;
+  }
+  .correct { background: #d4edda; color: #155724; }
+  .incorrect { background: #f8d7da; color: #721c24; }
+  .progress {
+    margin: 10px 0;
+    text-align: center;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #ddd;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: #005566;
+    border-radius: 5px;
+    transition: width 0.3s ease;
+  }
+  @media (max-width: 600px) {
+    h1 { font-size: 1.2rem; }
+    .question-card p { font-size: 0.9rem; }
+    button { font-size: 0.9rem; padding: 10px; }
+    .feedback { font-size: 0.8rem; }
+  }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>Pillar 2 Pursuit: Mastering Australia’s Global Minimum Tax</h1>
-    <div class="progress">
-      <div class="progress-bar"><div class="progress-bar-fill" id="progress-bar"></div></div>
-      <p>Score: <span id="score">0</span></p>
-    </div>
-    <div id="question-container"></div>
-    <button onclick="nextQuestion()">Next Question</button>
+<div class="container">
+  <h1>Pillar 2 Pursuit: Mastering Australia’s Global Minimum Tax</h1>
+  <div class="progress">
+    <div class="progress-bar"><div class="progress-bar-fill" id="progress-bar"></div></div>
+    <p>Score: <span id="score">0</span></p>
   </div>
+  <div id="question-container"></div>
+  <button id="next-btn" onclick="nextQuestion()" style="display:none;">Next Question</button>
+</div>
 
-  <script>
-    const questions = [
-      {
-        level: 1,
-        text: "True or False: Pillar 2 applies to MNEs with consolidated annual revenue of €750M or more in at least two of the four preceding fiscal years.",
-        type: "truefalse",
-        answer: true,
-        explanation: "Correct! Pillar 2 applies to MNEs with €750M+ revenue in 2 of the 4 prior fiscal years, as per the OECD GloBE Rules and Australian legislation. [ATO, 2024]"[](https://www.ato.gov.au/businesses-and-organisations/international-tax-for-business/in-detail/multinationals/global-and-domestic-minimum-tax)
-      },
-      {
-        level: 2,
-        text: "An MNE has a jurisdictional ETR of 10% and €1M in excess profits in Australia. Calculate the QDMTT liability (assume €200,000 Substance-Based Income Exclusion).",
-        type: "multiple",
-        options: ["€40,000", "€50,000", "€150,000", "€0"],
-        answer: "€40,000",
-        explanation: "QDMTT = (15% - 10%) x (€1M - €200,000) = 5% x €800,000 = €40,000. The QDMTT ensures Australia collects top-up tax on low-taxed domestic profits. [oecdpillars.com]"[](https://oecdpillars.com/pillar-tab/pillar-two-implementation/)
-      },
-      {
-        level: 3,
-        text: "When does the Undertaxed Profits Rule (UTPR) apply in Australia?",
-        type: "multiple",
-        options: [
-          "Fiscal years starting on or after Jan 1, 2024",
-          "Fiscal years starting on or after Jan 1, 2025",
-          "Immediately upon low ETR detection",
-          "Only for non-resident MNEs"
-        ],
-        answer: "Fiscal years starting on or after Jan 1, 2025",
-        explanation: "The UTPR applies from Jan 1, 2025, as a backstop to tax undertaxed foreign profits not covered by IIR. [ATO, 2024]"[](https://www.ato.gov.au/businesses-and-organisations/international-tax-for-business/in-detail/multinationals/global-and-domestic-minimum-tax)
-      }
-    ];
+<script>
+const questions = [
+  {
+    level: 1,
+    text: "True or False: Pillar 2 applies to MNEs with consolidated annual revenue of €750M or more in at least two of the four preceding fiscal years.",
+    type: "truefalse",
+    answer: true,
+    explanation: "Correct! Pillar 2 applies to MNEs with €750M+ revenue in 2 of the 4 prior fiscal years, as per the OECD GloBE Rules and Australian legislation. [ATO, 2024]"
+  },
+  {
+    level: 2,
+    text: "An MNE has a jurisdictional ETR of 10% and €1M in excess profits in Australia. Calculate the QDMTT liability (assume €200,000 Substance-Based Income Exclusion).",
+    type: "multiple",
+    options: ["€40,000", "€50,000", "€150,000", "€0"],
+    answer: "€40,000",
+    explanation: "QDMTT = (15% - 10%) x (€1M - €200,000) = 5% x €800,000 = €40,000. The QDMTT ensures Australia collects top-up tax on low-taxed domestic profits. [oecdpillars.com]"
+  },
+  {
+    level: 3,
+    text: "When does the Undertaxed Profits Rule (UTPR) apply in Australia?",
+    type: "multiple",
+    options: [
+      "Fiscal years starting on or after Jan 1, 2024",
+      "Fiscal years starting on or after Jan 1, 2025",
+      "Immediately upon low ETR detection",
+      "Only for non-resident MNEs"
+    ],
+    answer: "Fiscal years starting on or after Jan 1, 2025",
+    explanation: "The UTPR applies from Jan 1, 2025, as a backstop to tax undertaxed foreign profits not covered by IIR. [ATO, 2024]"
+  }
+];
 
-    let currentQuestionIndex = 0;
-    let score = 0;
+let currentQuestionIndex = 0;
+let score = 0;
+let questionAnswered = false;
 
-    function displayQuestion() {
-      const question = questions[currentQuestionIndex];
-      const container = document.getElementById("question-container");
-      let html = `<div class="question-card"><p>${question.text}</p>`;
+function displayQuestion() {
+  const question = questions[currentQuestionIndex];
+  const container = document.getElementById("question-container");
+  let html = `<div class="question-card"><p>${question.text}</p>`;
 
-      if (question.type === "truefalse") {
-        html += `
-          <button onclick="checkAnswer(true)">True</button>
-          <button onclick="checkAnswer(false)">False</button>
-        `;
-      } else {
-        html += question.options.map(option => `
-          <button onclick="checkAnswer('${option}')">${option}</button>
-        `).join("");
-      }
+  if (question.type === "truefalse") {
+    html += `
+      <button onclick="checkAnswer(true)">True</button>
+      <button onclick="checkAnswer(false)">False</button>
+    `;
+  } else {
+    html += question.options.map(option => `
+      <button onclick="checkAnswer('${option}')">${option}</button>
+    `).join("");
+  }
 
-      html += `<div id="feedback" class="feedback"></div></div>`;
-      container.innerHTML = html;
-      updateProgress();
-    }
+  html += `<div id="feedback" class="feedback"></div></div>`;
+  container.innerHTML = html;
+  document.getElementById("next-btn").style.display = "none";
+  updateProgress();
+}
 
-    function checkAnswer(userAnswer) {
-      const question = questions[currentQuestionIndex];
-      const feedback = document.getElementById("feedback");
-      const isCorrect = userAnswer === question.answer;
+function checkAnswer(userAnswer) {
+  if (questionAnswered) return;
+  questionAnswered = true;
 
-      if (isCorrect) {
-        score += 10;
-        document.getElementById("score").textContent = score;
-        feedback.className = "feedback correct";
-        feedback.textContent = question.explanation;
-      } else {
-        feedback.className = "feedback incorrect";
-        feedback.textContent = `Incorrect. ${question.explanation}`;
-      }
-      feedback.style.display = "block";
-    }
+  const question = questions[currentQuestionIndex];
+  const feedback = document.getElementById("feedback");
+  const buttons = document.querySelectorAll("#question-container button");
+  const isCorrect = userAnswer === question.answer;
 
-    function nextQuestion() {
-      currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
-      displayQuestion();
-    }
+  buttons.forEach(btn => btn.disabled = true);
 
-    function updateProgress() {
-      const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
-      document.getElementById("progress-bar").style.width = `${progress}%`;
-    }
+  if (isCorrect) {
+    score += 10;
+    document.getElementById("score").textContent = score;
+    feedback.className = "feedback correct";
+    feedback.textContent = question.explanation;
+  } else {
+    feedback.className = "feedback incorrect";
+    feedback.textContent = `Incorrect. ${question.explanation}`;
+  }
+  feedback.style.display = "block";
+  document.getElementById("next-btn").style.display = "block";
+}
 
-    // Initialize game
+function nextQuestion() {
+  if (currentQuestionIndex < questions.length - 1) {
+    currentQuestionIndex++;
+    questionAnswered = false;
     displayQuestion();
-  </script>
+  } else {
+    endGame();
+  }
+}
+
+function updateProgress() {
+  const progress = ((currentQuestionIndex) / questions.length) * 100;
+  document.getElementById("progress-bar").style.width = `${progress}%`;
+}
+
+function endGame() {
+  const container = document.getElementById("question-container");
+  container.innerHTML = `<h2>Game Over!</h2><p>Your final score: ${score}</p>
+    <button onclick="restartGame()">Play Again</button>`;
+  document.getElementById("next-btn").style.display = "none";
+}
+
+function restartGame() {
+  score = 0;
+  currentQuestionIndex = 0;
+  questionAnswered = false;
+  document.getElementById("score").textContent = score;
+  displayQuestion();
+}
+
+displayQuestion();
+</script>
 </body>
 </html>
