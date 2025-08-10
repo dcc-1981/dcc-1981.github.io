@@ -1,539 +1,452 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tax Trek: Australia’s Global Minimum Tax Challenge</title>
+  <meta charset="UTF-8">
+  <title>Pillar Two Challenge</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      color: #333;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
       margin: 0;
-      padding: 20px;
-      text-align: center;
+      padding: 0;
     }
     .container {
       max-width: 800px;
       margin: auto;
-      background: white;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    select, button {
+      font-size: 1em;
+      padding: 10px;
+      margin: 10px 0;
+      width: 100%;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .quiz-box {
+      background: #fff;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
-    h1, h2 {
-      color: #005566;
+    .question {
+      font-weight: bold;
+      margin-bottom: 10px;
     }
-    button.lesson-button,
-    button.choice,
-    #next-exercise {
+    .difficulty {
+      float: right;
+      font-size: 0.8em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #ccc;
+    }
+    .easy { background: #b2fab4; }
+    .medium { background: #ffe082; }
+    .hard { background: #ff8a80; }
+    .options button {
       display: block;
-      margin: 10px auto;
-      padding: 15px;
-      background: #005566;
-      color: #fff;
+      margin: 8px 0;
+      padding: 10px;
+      width: 100%;
       border: none;
       border-radius: 5px;
+      background: #e0e0e0;
       cursor: pointer;
-      font-size: 1rem;
-      width: 80%;
-      max-width: 400px;
+      transition: background 0.3s;
+    }
+    .options button:hover {
+      background: #d0d0d0;
+    }
+    .feedback {
+      margin-top: 10px;
+      font-style: italic;
+    }
+    .learn-more {
+      margin-top: 5px;
+      font-size: 0.9em;
+    }
+    .progress-bar {
+      height: 10px;
+      background: #ddd;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #4caf50;
+      transition: width 0.5s;
+    }
+    .score-box {
       text-align: center;
-      user-select: none;
-      transition: background-color 0.3s ease;
-    }
-    button.lesson-button:hover,
-    button.choice:hover,
-    #next-exercise:hover,
-    button.lesson-button:focus,
-    button.choice:focus,
-    #next-exercise:focus {
-      background: #003d4a;
-      outline: none;
-      box-shadow: 0 0 0 3px #66a3ad;
-    }
-    button.choice {
-      background: #eee;
-      color: #333;
-      border: 1px solid #ddd;
-      width: 80%;
-      max-width: 400px;
-      padding: 10px;
-      margin: 8px auto;
-      cursor: pointer;
-    }
-    button.choice.correct {
-      background-color: #d4edda;
-      color: #155724;
-      border-color: #c3e6cb;
-      cursor: default;
-    }
-    button.choice.incorrect {
-      background-color: #f8d7da;
-      color: #721c24;
-      border-color: #f5c6cb;
-      cursor: default;
-    }
-    button.submit-btn {
-      background: #005566;
-      color: #fff;
-      margin-top: 10px;
-      width: 80%;
-      max-width: 400px;
-    }
-    button.submit-btn:hover, button.submit-btn:focus {
-      background: #003d4a;
-      box-shadow: 0 0 0 3px #66a3ad;
-    }
-    input[type="text"] {
-      width: 80%;
-      max-width: 400px;
-      padding: 10px;
-      margin: 10px 0;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-size: 1rem;
-    }
-    #feedback {
-      margin: 15px 0;
-      padding: 12px;
-      border-radius: 5px;
-      font-weight: bold;
-      min-height: 40px;
-      aria-live: polite;
-    }
-    #feedback.correct {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-    #feedback.incorrect {
-      background: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-    }
-    #stats, #stats-lesson {
-      margin: 10px 0;
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-    #next-exercise {
       margin-top: 20px;
-      width: auto;
-      padding: 12px 25px;
-      font-weight: bold;
-    }
-    #progress {
-      margin-top: 10px;
-      font-size: 1rem;
-      color: #005566;
-    }
-    #completion {
-      display: none;
-      margin-top: 20px;
-      padding: 15px;
-      background: #d4edda;
-      border-radius: 5px;
-    }
-    #recap-quiz {
-      display: none;
-      margin-top: 20px;
-    }
-    #exit-lesson {
-      margin-top: 15px;
-      background: #999;
-      color: white;
-      padding: 12px 25px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-      width: auto;
-    }
-    #exit-lesson:hover, #exit-lesson:focus {
-      background: #666;
-      outline: none;
-      box-shadow: 0 0 0 3px #999;
-    }
-    @media (max-width: 600px) {
-      button.lesson-button, button.choice, input[type="text"], button.submit-btn {
-        width: 100%;
-        max-width: 100%;
-      }
     }
   </style>
 </head>
 <body>
-  <div class="container" id="home" aria-label="Home screen with lessons">
-    <h1>Tax Trek</h1>
-    <p>Australia’s Global Minimum Tax Challenge</p>
-    <div id="stats" aria-live="polite">
-      <span id="hearts">Hearts: 5</span> | <span id="xp">XP: 0</span> | <span id="streak">Streak: 0 days</span>
+  <div class="container">
+    <h1>Pillar Two Challenge</h1>
+    <div class="quiz-box">
+      <label for="sectionSelect">Choose a section:</label>
+      <select id="sectionSelect">
+        <option value="qdmt">QDMTT</option>
+        <option value="iir">IIR</option>
+        <option value="utpr">UTPR</option>
+        <option value="general">General Concepts</option>
+        <option value="auslaw">Australia-Specific Law</option>
+      </select>
+      <button onclick="startQuiz()">Start Quiz</button>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div id="quiz"></div>
+      <div class="score-box" id="score"></div>
     </div>
-    <h2>Lessons</h2>
-    <!-- Lesson buttons will be added here -->
-  </div>
-
-  <div class="container" id="lesson" style="display:none;" aria-label="Lesson view">
-    <h1 id="lesson-title"></h1>
-    <div id="stats-lesson" aria-live="polite">
-      <span id="hearts-lesson">Hearts: 5</span> | <span id="xp-lesson">XP: 0</span>
-    </div>
-    <div id="progress"></div>
-    <div class="exercise" id="exercise-content" role="region" aria-live="polite" aria-atomic="true"></div>
-    <div id="feedback" aria-live="polite"></div>
-    <button id="next-exercise" style="display:none;">Next Exercise</button>
-    <button id="exit-lesson">Exit Lesson</button>
-    <div id="completion"></div>
-    <div id="recap-quiz"></div>
   </div>
 
   <script>
-    // ===== Data =====
-    const lessons = [
-      {
-        title: "Basics of Pillar 2",
-        exercises: [
-          {
-            type: "tf",
-            question: "True or False: Pillar 2 applies to MNEs with consolidated annual revenue of €750m or more in at least two of the four preceding fiscal years.",
-            answer: true,
-            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 5]"
-          },
-          {
-            type: "mc",
-            question: "What is the minimum tax rate under Pillar 2?",
-            options: ["10%", "15%", "20%", "25%"],
-            answer: "15%",
-            explanation: "15%. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 10]"
-          },
-          {
-            type: "fib",
-            question: "The global minimum tax is implemented through the ______ Rules.",
-            answer: "GloBE",
-            explanation: "GloBE Rules. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 12]"
-          }
-        ]
-      },
-      {
-        title: "Scope and Application",
-        exercises: [
-          {
-            type: "mc",
-            question: "Pillar 2 applies to fiscal years starting on or after which date for IIR and DMT?",
-            options: ["January 1, 2023", "January 1, 2024", "January 1, 2025", "January 1, 2026"],
-            answer: "January 1, 2024",
-            explanation: "January 1, 2024. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 7]"
-          },
-          {
-            type: "tf",
-            question: "True or False: The scope is MNEs with €750m+ revenue in 2 of 4 prior fiscal years.",
-            answer: true,
-            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 5]"
-          },
-          {
-            type: "fib",
-            question: "The Act is called Taxation (Multinational—Global and Domestic Minimum Tax) Act _____.",
-            answer: "2024",
-            explanation: "2024."
-          }
-        ]
-      }
-      // Add other lessons similarly...
-    ];
+    const quizzes = {
+  qdmt: [
+    {
+      text: "What is the minimum effective tax rate required under Australia’s QDMTT?",
+      options: ["15%", "10%", "20%"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.legislation.gov.au/Details/C2024A00123"
+    },
+    {
+      text: "Which entities are subject to QDMTT in Australia?",
+      options: ["All Australian entities", "Entities in MNE groups with global revenue ≥ €750M", "Only foreign-owned entities"],
+      answer: 1,
+      difficulty: "medium",
+      learnMore: "https://www.ato.gov.au/Business/International-tax/Global-minimum-tax/"
+    },
+    {
+      text: "How is the QDMTT top-up tax calculated?",
+      options: ["Based on accounting profit", "Based on excess profit over 15% ETR", "Flat rate on taxable income"],
+      answer: 1,
+      difficulty: "hard",
+      learnMore: "https://www.oecd.org/tax/beps/global-anti-base-erosion-rules.htm"
+    },
+    {
+      text: "Which income years does QDMTT apply to in Australia?",
+      options: ["Starting on or after 1 Jan 2024", "Starting on or after 1 July 2024", "Starting on or after 1 Jan 2025"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.legislation.gov.au/Details/C2024A00123"
+    },
+    {
+      text: "What is the role of the GloBE Information Return in QDMTT compliance?",
+      options: ["It replaces tax returns", "It reports jurisdictional ETR and top-up tax", "It determines eligibility for QDMTT"],
+      answer: 1,
+      difficulty: "medium",
+      learnMore: "https://www.oecd.org/tax/beps/globe-information-return.htm"
+    },
+    {
+      text: "Which rule takes priority: QDMTT or IIR?",
+      options: ["QDMTT", "IIR", "UTPR"],
+      answer: 0,
+      difficulty: "hard",
+      learnMore: "https://www.legislation.gov.au/Details/C2024A00123"
+    },
+    {
+      text: "Does Australia’s QDMTT apply to passive income?",
+      options: ["Yes, if included in covered taxes", "No, passive income is excluded", "Only if derived from foreign sources"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.ato.gov.au"
+    },
+    {
+      text: "What is the purpose of QDMTT?",
+      options: ["To reduce corporate tax rates", "To ensure minimum taxation in Australia before foreign rules apply", "To simplify tax compliance"],
+      answer: 1,
+      difficulty: "easy",
+      learnMore: "https://www.oecd.org/tax/beps/"
+    },
+    {
+      text: "Which accounting standard is used to determine covered taxes under QDMTT?",
+      options: ["IFRS", "Australian GAAP", "OECD-defined GloBE standard"],
+      answer: 2,
+      difficulty: "hard",
+      learnMore: "https://www.oecd.org/tax/beps/globe-model-rules.htm"
+    },
+    {
+      text: "Can QDMTT result in no top-up tax if the jurisdictional ETR is ≥ 15%?",
+      options: ["Yes", "No", "Only if approved by the ATO"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.legislation.gov.au/Details/C2024A00123"
+    }
+  ],
+    iir: [
+    {
+      text: "What does IIR stand for in the Pillar Two framework?",
+      options: ["Income Inclusion Rule", "International Income Regulation", "Indirect Income Reporting"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.oecd.org/tax/beps/income-inclusion-rule.htm"
+    },
+    {
+      text: "Which entity applies the IIR?",
+      options: ["Ultimate parent entity", "Local subsidiary", "Tax authority"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.legislation.gov.au"
+    },
+    {
+      text: "What triggers the IIR?",
+      options: ["Low ETR in a foreign jurisdiction", "High revenue in Australia", "Losses in the parent entity"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.oecd.org/tax/beps/"
+    },
+    {
+      text: "Does Australia’s IIR apply to foreign subsidiaries?",
+      options: ["Yes", "No", "Only if they are profitable"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.ato.gov.au"
+    },
+    {
+      text: "What is the top-up tax rate under IIR?",
+      options: ["15%", "10%", "20%"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.legislation.gov.au"
+    },
+    {
+      text: "How is the IIR top-up tax calculated?",
+      options: ["Based on excess profit over 15% ETR", "Flat rate on gross income", "Based on local tax paid"],
+      answer: 0,
+      difficulty: "hard",
+      learnMore: "https://www.oecd.org/tax/beps/"
+    },
+    {
+      text: "Which rule applies first: IIR or UTPR?",
+      options: ["IIR", "UTPR", "QDMTT"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.legislation.gov.au"
+    },
+    {
+      text: "Can IIR apply to passive income?",
+      options: ["Yes", "No", "Only if derived from royalties"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.oecd.org"
+    },
+    {
+      text: "What is the role of the GloBE rules in IIR?",
+      options: ["Define scope and calculation", "Replace local tax law", "Determine residency"],
+      answer: 0,
+      difficulty: "hard",
+      learnMore: "https://www.oecd.org/tax/beps/globe-model-rules.htm"
+    },
+    {
+      text: "Is the IIR part of Australia’s 2024 enacted law?",
+      options: ["Yes", "No", "Only in draft form"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.legislation.gov.au"
+    }
+  ],
+  utpr: [
+    {
+      text: "What does UTPR stand for?",
+      options: ["Undertaxed Profits Rule", "Universal Tax Payment Regulation", "Unreported Taxable Profits Rule"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.oecd.org/tax/beps/undertaxed-profits-rule.htm"
+    },
+    {
+      text: "When does Australia’s UTPR take effect?",
+      options: ["1 Jan 2025", "1 Jan 2024", "1 July 2025"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.legislation.gov.au"
+    },
+    {
+      text: "What is the purpose of UTPR?",
+      options: ["To allocate top-up tax when IIR doesn’t apply", "To reduce tax rates", "To simplify reporting"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.oecd.org"
+    },
+    {
+      text: "Which entities are affected by UTPR?",
+      options: ["Constituent entities in jurisdictions with low ETR", "Only parent entities", "Only Australian entities"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.ato.gov.au"
+    },
+    {
+      text: "How is the UTPR top-up tax allocated?",
+      options: ["Based on employees and tangible assets", "Equally across jurisdictions", "Based on revenue"],
+      answer: 0,
+      difficulty: "hard",
+      learnMore: "https://www.oecd.org"
+    },
+    {
+      text: "Can UTPR apply if IIR has already been applied?",
+      options: ["No", "Yes", "Only if approved by the ATO"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.legislation.gov.au"
+    },
+    {
+      text: "Is UTPR part of Australia’s 2024 legislation?",
+      options: ["Yes", "No", "Only in draft form"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.legislation.gov.au"
+    },
+    {
+      text: "What is the minimum ETR threshold triggering UTPR?",
+      options: ["15%", "10%", "20%"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.oecd.org"
+    },
+    {
+      text: "Does UTPR override QDMTT?",
+      options: ["No, QDMTT applies first", "Yes", "Only in foreign jurisdictions"],
+      answer: 0,
+      difficulty: "hard",
+      learnMore: "https://www.legislation.gov.au"
+    },
+    {
+      text: "What is the role of the GloBE rules in UTPR?",
+      options: ["Define allocation and scope", "Determine residency", "Set tax rates"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.oecd.org/tax/beps/globe-model-rules.htm"
+    }
+  ],
+  general: [
+    {
+      text: "What is the global revenue threshold for Pillar Two?",
+      options: ["€750M", "AUD 1B", "USD 500M"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.oecd.org/tax/beps/"
+    },
+    {
+      text: "What is the minimum effective tax rate under Pillar Two?",
+      options: ["10%", "12.5%", "15%", "20%"],
+      answer: 2,
+      difficulty: "easy",
+      learnMore: "https://www.oecd.org/tax/beps/"
+    },
+    {
+      text: "Which entities are primarily affected by Pillar Two?",
+      options: ["Startups", "SMEs", "MNEs with revenue over €750M", "Non-profits"],
+      answer: 2,
+      difficulty: "medium",
+      learnMore: "https://www.oecd.org/tax/beps/"
+    },
+    {
+      text: "What is the purpose of Pillar Two?",
+      options: ["To ensure a minimum level of taxation globally", "To eliminate corporate tax", "To promote trade"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.oecd.org/tax/beps/"
+    },
+    {
+      text: "Which organization developed the Pillar Two framework?",
+      options: ["UN", "OECD", "IMF"],
+      answer: 1,
+      difficulty: "easy",
+      learnMore: "https://www.oecd.org/tax/beps/"
+    },
+    {
+      text: "What are the core rules under Pillar Two?",
+      options: ["QDMTT, IIR, UTPR", "VAT, GST, PAYG", "BEPS, FATCA, CRS"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.oecd.org/tax/beps/"
+    },
+    {
+      text: "Does Pillar Two apply to domestic-only companies?",
+      options: ["No", "Yes", "Only if revenue exceeds €750M"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.oecd.org/tax/beps/"
+    },
+    {
+      text: "Is Pillar Two part of the OECD/G20 Inclusive Framework?",
+      options: ["Yes", "No", "Only for EU countries"],
+      answer: 0,
+      difficulty: "easy",
+      learnMore: "https://www.oecd.org/tax/beps/"
+    },
+    {
+      text: "What is the role of the GloBE rules?",
+      options: ["To calculate top-up tax", "To set VAT rates", "To define residency"],
+      answer: 0,
+      difficulty: "medium",
+      learnMore: "https://www.oecd.org/tax/beps/globe-model-rules.htm"
+    },
+    {
+      text: "Can countries implement Pillar Two differently?",
+      options: ["Yes, within OECD guidelines", "No, it must be identical", "Only with UN approval"],
+      answer: 
+;
 
-    // ===== State =====
-    let currentLesson = 0;
-    let currentExercise = 0;
-    let hearts = 5;
-    let xp = 0;
-    let streak = 0;
-    const dailyGoal = 50; // XP needed for daily reward
-    const maxHearts = 5;
+    let current = 0, score = 0, currentQuiz = [];
 
-    // Local Storage Keys
-    const storageKeys = {
-      xp: 'taxTrek_xp',
-      streak: 'taxTrek_streak',
-      lastDay: 'taxTrek_lastDay',
-      hearts: 'taxTrek_hearts'
-    };
-
-    // ===== Load and Save Progress =====
-    function loadProgress() {
-      xp = parseInt(localStorage.getItem(storageKeys.xp)) || 0;
-      streak = parseInt(localStorage.getItem(storageKeys.streak)) || 0;
-      hearts = parseInt(localStorage.getItem(storageKeys.hearts)) || maxHearts;
-      const lastDay = localStorage.getItem(storageKeys.lastDay);
-      const today = new Date().toDateString();
-
-      if (!lastDay) {
-        streak = 1;
-      } else {
-        const lastDate = new Date(lastDay);
-        const diffTime = new Date(today) - lastDate;
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays === 1) {
-          streak++;
-          if (streak % 3 === 0) hearts = Math.min(hearts + 1, maxHearts);
-        } else if (diffDays > 1) {
-          streak = 1;
-          hearts = maxHearts;
-        }
-      }
-      localStorage.setItem(storageKeys.lastDay, today);
-      localStorage.setItem(storageKeys.streak, streak);
-      localStorage.setItem(storageKeys.hearts, hearts);
-      updateStats();
+    function startQuiz() {
+      const section = document.getElementById("sectionSelect").value;
+      currentQuiz = quizzes[section];
+      current = 0;
+      score = 0;
+      document.getElementById("score").innerHTML = "";
+      loadQuestion();
     }
 
-    function saveProgress() {
-      localStorage.setItem(storageKeys.xp, xp);
-      localStorage.setItem(storageKeys.streak, streak);
-      localStorage.setItem(storageKeys.hearts, hearts);
-    }
+    function loadQuestion() {
+      const q = currentQuiz[current];
+      const quizDiv = document.getElementById("quiz");
+      const progress = ((current / currentQuiz.length) * 100).toFixed(0);
+      document.getElementById("progressFill").style.width = `${progress}%`;
 
-    // ===== UI Updates =====
-    function updateStats() {
-      document.getElementById('hearts').textContent = `Hearts: ${hearts}`;
-      document.getElementById('xp').textContent = `XP: ${xp} / ${dailyGoal} (Goal)`;
-      document.getElementById('streak').textContent = `Streak: ${streak} days`;
-      if (document.getElementById('hearts-lesson') && document.getElementById('xp-lesson')) {
-        document.getElementById('hearts-lesson').textContent = `Hearts: ${hearts}`;
-        document.getElementById('xp-lesson').textContent = `XP: ${xp} / ${dailyGoal} (Goal)`;
-      }
-      saveProgress();
-    }
-
-    function displayLessons() {
-      const home = document.getElementById('home');
-      // Remove old buttons if any
-      home.querySelectorAll('button.lesson-button').forEach(btn => btn.remove());
-      lessons.forEach((lesson, index) => {
-        const button = document.createElement('button');
-        button.className = 'lesson-button';
-        button.textContent = lesson.title;
-        button.setAttribute('aria-label', `Start lesson: ${lesson.title}`);
-        button.onclick = () => startLesson(index);
-        home.appendChild(button);
-      });
-    }
-
-    function startLesson(lessonIndex) {
-      currentLesson = lessonIndex;
-      currentExercise = 0;
-      document.getElementById('home').style.display = 'none';
-      document.getElementById('lesson').style.display = 'block';
-      document.getElementById('lesson-title').textContent = lessons[currentLesson].title;
-      displayExercise();
-    }
-
-    function displayExercise() {
-      const exercise = lessons[currentLesson].exercises[currentExercise];
-      const content = document.getElementById('exercise-content');
-      const feedback = document.getElementById('feedback');
-      const nextBtn = document.getElementById('next-exercise');
-      const progress = document.getElementById('progress');
-      const recapQuiz = document.getElementById('recap-quiz');
-
-      content.innerHTML = `<p>${exercise.question}</p>`;
-      feedback.textContent = '';
-      feedback.className = '';
-      nextBtn.style.display = 'none';
-      progress.textContent = `Exercise ${currentExercise + 1} of ${lessons[currentLesson].exercises.length}`;
-      recapQuiz.style.display = 'none';
-      recapQuiz.innerHTML = '';
-
-      if (exercise.type === "tf") {
-        ['True', 'False'].forEach(val => {
-          const btn = document.createElement('button');
-          btn.className = 'choice';
-          btn.textContent = val;
-          btn.setAttribute('aria-pressed', 'false');
-          btn.onclick = () => checkAnswer(val === 'True');
-          content.appendChild(btn);
-        });
-      } else if (exercise.type === "mc") {
-        exercise.options.forEach(option => {
-          const btn = document.createElement('button');
-          btn.className = 'choice';
-          btn.textContent = option;
-          btn.setAttribute('aria-pressed', 'false');
-          btn.onclick = () => checkAnswer(option);
-          content.appendChild(btn);
-        });
-      } else if (exercise.type === "fib") {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.id = 'fib-input';
-        input.setAttribute('aria-label', 'Fill in the blank answer');
-        content.appendChild(input);
-
-        const submitBtn = document.createElement('button');
-        submitBtn.textContent = 'Submit Answer';
-        submitBtn.className = 'submit-btn';
-        submitBtn.onclick = () => {
-          const userAnswer = input.value.trim();
-          if (!userAnswer) {
-            alert("Please enter an answer before submitting.");
-            input.focus();
-            return;
-          }
-          checkAnswer(userAnswer);
-        };
-        content.appendChild(submitBtn);
-
-        input.addEventListener('keydown', e => {
-          if (e.key === 'Enter') submitBtn.click();
-        });
-        input.focus();
-      }
-    }
-
-    function checkAnswer(userAnswer) {
-      const exercise = lessons[currentLesson].exercises[currentExercise];
-      const feedback = document.getElementById('feedback');
-      const nextBtn = document.getElementById('next-exercise');
-      const content = document.getElementById('exercise-content');
-      const choices = content.querySelectorAll('button.choice');
-      const input = document.getElementById('fib-input');
-
-      // Determine correctness
-      let isCorrect;
-      if (exercise.type === 'fib') {
-        isCorrect = userAnswer.toLowerCase() === exercise.answer.toLowerCase();
-      } else if (exercise.type === 'tf' || exercise.type === 'mc') {
-        isCorrect = userAnswer === exercise.answer;
-      } else {
-        isCorrect = false;
-      }
-
-      // Show feedback with explanation
-      feedback.className = isCorrect ? 'correct' : 'incorrect';
-      feedback.textContent = (isCorrect ? "Correct! " : "Incorrect. ") + exercise.explanation;
-
-      // Disable all choices and style
-      choices.forEach(btn => {
-        btn.disabled = true;
-        if (isCorrect && btn.textContent === userAnswer.toString()) {
-          btn.classList.add('correct');
-        } else if (!isCorrect && btn.textContent === userAnswer.toString()) {
-          btn.classList.add('incorrect');
-        }
-      });
-
-      // Disable input and submit button for FIB
-      if (input) {
-        input.disabled = true;
-        const submitBtn = content.querySelector('button.submit-btn');
-        if (submitBtn) submitBtn.disabled = true;
-      }
-
-      // Update XP and hearts
-      if (isCorrect) {
-        xp += 10;
-        if (xp >= dailyGoal && streak > 0) {
-          xp = xp % dailyGoal;
-          alert("Daily goal reached! +1 Heart (max 5)");
-          hearts = Math.min(hearts + 1, maxHearts);
-        }
-      } else {
-        hearts--;
-      }
-      updateStats();
-
-      if (hearts <= 0) {
-        displayRecapQuiz();
-        nextBtn.style.display = 'none';
-        return;
-      }
-
-      // Show next button
-      nextBtn.style.display = 'inline-block';
-      nextBtn.focus();
-    }
-
-    function displayRecapQuiz() {
-      const recapQuiz = document.getElementById('recap-quiz');
-      const exercise = lessons[currentLesson].exercises[currentExercise];
-      recapQuiz.style.display = 'block';
-      recapQuiz.innerHTML = `
-        <p>Out of hearts! Complete this recap to restore 2 hearts.</p>
-        <p>Question: What is the key rule related to "${exercise.question.split('?')[0]}"?</p>
-        <button class="choice" onclick="checkRecap('€750m or more')">€750m or more</button>
-        <button class="choice" onclick="checkRecap('15% minimum tax')">15% minimum tax</button>
-        <button class="choice" onclick="checkRecap('GloBE Rules')">GloBE Rules</button>
+      quizDiv.innerHTML = `
+        <div class="question">${q.text} <span class="difficulty ${q.difficulty}">${q.difficulty.toUpperCase()}</span></div>
+        <div class="options">
+          ${q.options.map((opt, i) => `<button onclick="checkAnswer(${i})">${opt}</button>`).join("")}
+        </div>
+        <div class="learn-more"><a href="${q.learnMore}" target="_blank">Learn More</a></div>
+        <div class="feedback" id="feedback"></div>
       `;
     }
 
-    function checkRecap(answer) {
-      const recapQuiz = document.getElementById('recap-quiz');
-      const feedback = document.createElement('div');
-      feedback.id = 'feedback';
-      const correctKey = lessons[currentLesson].exercises[currentExercise].explanation.match(/€750m|15%|GloBE/)[0];
-      const isCorrect = answer.includes(correctKey) || correctKey.includes(answer);
-
-      feedback.className = isCorrect ? 'correct' : 'incorrect';
-      feedback.textContent = isCorrect ? "Correct! Restoring 2 hearts." : "Incorrect. Try again or exit.";
-      recapQuiz.appendChild(feedback);
-
-      if (isCorrect) {
-        hearts = Math.min(hearts + 2, maxHearts);
-        updateStats();
-        setTimeout(() => {
-          recapQuiz.style.display = 'none';
-          feedback.remove();
-          displayExercise();
-        }, 1200);
+    function checkAnswer(selected) {
+      const q = currentQuiz[current];
+      const feedback = document.getElementById("feedback");
+      if (selected === q.answer) {
+        score++;
+        feedback.textContent = "✅ Correct!";
       } else {
-        setTimeout(() => {
-          if (confirm("Failed recap. Exit lesson?")) {
-            returnToHome();
-          } else {
-            feedback.remove();
-          }
-        }, 1200);
+        feedback.textContent = `❌ Incorrect. Correct answer: ${q.options[q.answer]}`;
       }
+      current++;
+      setTimeout(() => {
+        if (current < currentQuiz.length) {
+          loadQuestion();
+        } else {
+          document.getElementById("quiz").innerHTML = "";
+          document.getElementById("progressFill").style.width = "100%";
+          document.getElementById("score").innerHTML = `
+            <h3>Quiz Complete!</h3>
+            <p>Your score: ${score} / ${currentQuiz.length}</p>
+            <button onclick="startQuiz()">Restart Quiz</button>
+          `;
+        }
+      }, 1500);
     }
-
-    document.getElementById('next-exercise').addEventListener('click', () => {
-      currentExercise++;
-      if (currentExercise >= lessons[currentLesson].exercises.length) {
-        const bonusXp = 50;
-        xp += bonusXp;
-        const completion = document.getElementById('completion');
-        completion.style.display = 'block';
-        completion.innerHTML = `<p>🎉 Congratulations! Lesson completed! +${bonusXp} XP</p><button onclick="returnToHome()">Continue</button>`;
-        updateStats();
-        document.getElementById('exercise-content').innerHTML = '';
-        document.getElementById('feedback').textContent = '';
-        document.getElementById('next-exercise').style.display = 'none';
-      } else {
-        displayExercise();
-      }
-    });
-
-    document.getElementById('exit-lesson').addEventListener('click', () => {
-      if (confirm('Are you sure you want to exit the lesson? Your progress in this lesson will be lost.')) {
-        returnToHome();
-      }
-    });
-
-    function returnToHome() {
-      document.getElementById('lesson').style.display = 'none';
-      document.getElementById('home').style.display = 'block';
-      hearts = Math.min(hearts, maxHearts);
-      updateStats();
-      document.getElementById('completion').style.display = 'none';
-      document.getElementById('recap-quiz').style.display = 'none';
-      document.getElementById('feedback').textContent = '';
-      document.getElementById('exercise-content').innerHTML = '';
-      document.getElementById('next-exercise').style.display = 'none';
-    }
-
-    // ===== Initialize =====
-    loadProgress();
-    displayLessons();
   </script>
 </body>
 </html>
