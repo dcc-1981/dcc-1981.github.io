@@ -1,103 +1,427 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Pillar 2 Explorer</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tax Quest: The Global Minimum Challenge</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 0; }
-    header { background: #003366; color: white; padding: 10px 20px; }
-    header h1 { margin: 0; }
-    .container { padding: 20px; }
-    .scenario-list button { 
-      background: white; 
-      border: 1px solid #ccc; 
-      padding: 10px; 
-      margin: 10px 0; 
-      width: 100%; 
-      text-align: left; 
-      cursor: pointer; 
+    /* [Your existing CSS remains largely the same] */
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      color: #005566;
+    }
+    button.lesson-button,
+    button.choice,
+    #next-exercise {
+      display: block;
+      margin: 10px auto;
+      padding: 15px;
+      background: #005566;
+      color: #fff;
+      border: none;
       border-radius: 5px;
+      cursor: pointer;
+      font-size: 1rem;
+      width: 80%;
+      max-width: 400px;
+      text-align: center;
+      user-select: none;
+      transition: background-color 0.3s ease;
     }
-    .scenario-list button:hover { background: #eef; }
-    .key-terms, .results { 
-      background: white; 
-      padding: 15px; 
-      border-radius: 5px; 
-      margin-top: 20px; 
+    button.lesson-button:hover,
+    button.choice:hover,
+    #next-exercise:hover,
+    button.lesson-button:focus,
+    button.choice:focus,
+    #next-exercise:focus {
+      background: #003d4a;
+      outline: none;
+      box-shadow: 0 0 0 3px #66a3ad;
+    }
+    button.choice {
+      background: #eee;
+      color: #333;
       border: 1px solid #ddd;
-    }
-    .term { font-weight: bold; color: #003366; }
-    .replay-btn { 
-      margin-top: 20px; 
-      background: #003366; 
-      color: white; 
-      padding: 10px 20px; 
-      border: none; 
-      border-radius: 5px; 
+      width: 80%;
+      max-width: 400px;
+      padding: 10px;
+      margin: 8px auto;
       cursor: pointer;
     }
-    .replay-btn:hover { background: #0055aa; }
+    button.choice.correct {
+      background-color: #d4edda;
+      color: #155724;
+      border-color: #c3e6cb;
+      cursor: default;
+    }
+    button.choice.incorrect {
+      background-color: #f8d7da;
+      color: #721c24;
+      border-color: #f5c6cb;
+      cursor: default;
+    }
+    input[type="text"] {
+      width: 80%;
+      max-width: 400px;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+    #feedback {
+      margin: 15px 0;
+      padding: 12px;
+      border-radius: 5px;
+      font-weight: bold;
+      min-height: 40px;
+      aria-live: polite;
+    }
+    #feedback.correct {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    #feedback.incorrect {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    #stats, #stats-lesson {
+      margin: 10px 0;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    #next-exercise {
+      margin-top: 20px;
+      width: auto;
+      padding: 12px 25px;
+      font-weight: bold;
+    }
+    #progress {
+      margin-top: 10px;
+      font-size: 1rem;
+      color: #005566;
+    }
+    #completion {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      background: #d4edda;
+      border-radius: 5px;
+    }
+    #recap-quiz {
+      display: none;
+      margin-top: 20px;
+    }
+    @media (max-width: 600px) {
+      button.lesson-button, button.choice, input[type="text"] {
+        width: 100%;
+        max-width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Pillar 2 Explorer – Light & Easy Edition</h1>
-  </header>
-  <div class="container" id="app">
-    <div class="scenario-list" id="scenarioList">
-      <h2>Pick a scenario:</h2>
-      <button onclick="playScenario(0)">US HQ, Aussie Subsidiary – Low Tax Rate (<small>Quick test of top-up tax</small>)</button>
-      <button onclick="playScenario(1)">US HQ, Aussie Subsidiary – QDMTT Applies (<small>Domestic top-up tax in action</small>)</button>
-      <button onclick="playScenario(2)">Global Group – UTPR Triggered (<small>Someone’s paying the difference</small>)</button>
+  <div class="container" id="home" aria-label="Home screen with lessons">
+    <h1>Tax Quest: The Global Minimum Challenge</h1>
+    <p>Master Australia's Global Minimum Tax</p>
+    <div id="stats" aria-live="polite">
+      <span id="hearts">Hearts: 5</span> | <span id="xp">XP: 0</span> | <span id="streak">Streak: 0 days</span>
     </div>
-    <div class="scenario" id="scenario" style="display:none;">
-      <h2 id="scenarioTitle"></h2>
-      <p id="scenarioText"></p>
+    <h2>Lessons</h2>
+    <!-- Lesson buttons dynamically added here -->
+  </div>
 
-      <div class="results" id="results"></div>
-
-      <div class="key-terms">
-        <h3>Key Terms</h3>
-        <p><span class="term">GloBE</span>: The OECD’s Global anti-Base Erosion rules – basically the Pillar 2 framework.</p>
-        <p><span class="term">QDMTT</span>: Qualified Domestic Minimum Top-up Tax – lets a country collect extra tax before others do.</p>
-        <p><span class="term">UTPR</span>: Undertaxed Profits Rule – a “backstop” rule letting other countries tax if you didn’t.</p>
-      </div>
-
-      <button class="replay-btn" onclick="replay()">Play Again</button>
+  <div class="container" id="lesson" style="display:none;" aria-label="Lesson view">
+    <h1 id="lesson-title"></h1>
+    <div id="stats-lesson" aria-live="polite">
+      <span id="hearts-lesson">Hearts: 5</span> | <span id="xp-lesson">XP: 0</span>
     </div>
+    <div id="progress"></div>
+    <div class="exercise" id="exercise-content" role="region" aria-live="polite" aria-atomic="true"></div>
+    <div id="feedback" aria-live="polite"></div>
+    <button id="next-exercise" style="display:none;">Next Exercise</button>
+    <button id="exit-lesson" style="margin-top:15px; background:#999;">Exit Lesson</button>
+    <div id="completion"></div>
+    <div id="recap-quiz"></div>
   </div>
 
   <script>
-    const scenarios = [
+    // ===== Data =====
+    const lessons = [
       {
-        title: "US HQ, Aussie Subsidiary – Low Tax Rate",
-        text: "Our fictional company, KoalaTech Inc., is headquartered in the US and has a big R&D hub in Australia. Aussie profits are taxed at 12%. Under Pillar 2, the global minimum is 15%. Spoiler: someone's writing a cheque.",
-        outcome: "Since Australia’s effective rate is below 15% and no QDMTT exists here, the US (or other jurisdictions) may impose a top-up tax to bring the total to 15%."
+        title: "Basics of Pillar 2",
+        exercises: [
+          {
+            type: "tf",
+            question: "True or False: Pillar 2 applies to MNEs with consolidated annual revenue of €750m or more in at least two of the four preceding fiscal years.",
+            answer: true,
+            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 5]"
+          },
+          {
+            type: "mc",
+            question: "What is the minimum tax rate under Pillar 2?",
+            options: ["10%", "15%", "20%", "25%"],
+            answer: "15%",
+            explanation: "15%. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 10]"
+          },
+          {
+            type: "fib",
+            question: "The global minimum tax is implemented through the ______ Rules.",
+            answer: "GloBE",
+            explanation: "GloBE Rules. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 12]"
+          }
+        ]
       },
       {
-        title: "US HQ, Aussie Subsidiary – QDMTT Applies",
-        text: "KoalaTech Inc. still earns big in Australia, but now Australia has introduced a Qualified Domestic Minimum Top-up Tax. Same low effective tax rate of 12%, but...",
-        outcome: "Australia collects the top-up itself to reach 15%, keeping the revenue here and blocking others from taxing it."
+        title: "Scope and Application",
+        exercises: [
+          {
+            type: "mc",
+            question: "Pillar 2 applies to fiscal years starting on or after which date for IIR and DMT?",
+            options: ["January 1, 2023", "January 1, 2024", "January 1, 2025", "January 1, 2026"],
+            answer: "January 1, 2024",
+            explanation: "January 1, 2024. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 7]"
+          },
+          {
+            type: "tf",
+            question: "True or False: The scope is MNEs with €750m+ revenue in 2 of 4 prior fiscal years.",
+            answer: true,
+            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 5]"
+          },
+          {
+            type: "fib",
+            question: "The Act is called Taxation (Multinational—Global and Domestic Minimum Tax) Act _____.",
+            answer: "2024",
+            explanation: "2024."
+          }
+        ]
       },
       {
-        title: "Global Group – UTPR Triggered",
-        text: "Our fictional group, Platypus Global, has subsidiaries in multiple countries. One jurisdiction has an effective rate of 5% and no QDMTT. That’s a big gap from 15%.",
-        outcome: "The Undertaxed Profits Rule allows other jurisdictions to grab the missing 10% in tax, even if the low-tax country doesn’t act."
+        title: "QDMTT Details",
+        exercises: [
+          {
+            type: "mc",
+            question: "QDMTT ensures Australia collects top-up tax on profits taxed below what rate?",
+            options: ["10%", "12%", "15%", "18%"],
+            answer: "15%",
+            explanation: "15%. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 15]"
+          },
+          {
+            type: "tf",
+            question: "True or False: QDMTT applies to domestic profits only.",
+            answer: true,
+            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 15]"
+          },
+          {
+            type: "fib",
+            question: "QDMTT is a Qualified Domestic Minimum ______ Tax.",
+            answer: "Top-up",
+            explanation: "Top-up. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 15]"
+          }
+        ]
+      },
+      {
+        title: "UTPR Mechanics",
+        exercises: [
+          {
+            type: "mc",
+            question: "UTPR applies from fiscal years starting on or after which date?",
+            options: ["January 1, 2024", "January 1, 2025", "January 1, 2026", "January 1, 2027"],
+            answer: "January 1, 2025",
+            explanation: "January 1, 2025. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 20]"
+          },
+          {
+            type: "tf",
+            question: "True or False: UTPR can deny deductions to collect top-up tax.",
+            answer: true,
+            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 20]"
+          },
+          {
+            type: "fib",
+            question: "UTPR stands for Undertaxed ______ Rule.",
+            answer: "Profits",
+            explanation: "Profits. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 20]"
+          }
+        ]
+      },
+      {
+        title: "IIR and Safe Harbours",
+        exercises: [
+          {
+            type: "mc",
+            question: "The Transitional CbCR Safe Harbour reduces top-up tax to zero if conditions are met using what data?",
+            options: ["CbC reporting", "Financial statements", "Tax returns", "Audit reports"],
+            answer: "CbC reporting",
+            explanation: "CbC reporting. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 25]"
+          },
+          {
+            type: "tf",
+            question: "True or False: IIR includes low-taxed income in the parent's taxable income.",
+            answer: true,
+            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 18]"
+          },
+          {
+            type: "fib",
+            question: "IIR is the Income Inclusion ______.",
+            answer: "Rule",
+            explanation: "Rule. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 18]"
+          }
+        ]
+      },
+      {
+        title: "Filing Obligations",
+        exercises: [
+          {
+            type: "mc",
+            question: "What return must be filed even if no tax is due?",
+            options: ["GloBE Information Return", "Income Tax Return", "VAT Return", "GST Return"],
+            answer: "GloBE Information Return",
+            explanation: "GloBE Information Return. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 30]"
+          },
+          {
+            type: "tf",
+            question: "True or False: Filing is required regardless of liability.",
+            answer: true,
+            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 30]"
+          },
+          {
+            type: "fib",
+            question: "The GloBE ______ Return is mandatory.",
+            answer: "Information",
+            explanation: "Information. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 30]"
+          }
+        ]
       }
     ];
 
-    function playScenario(index) {
-      document.getElementById('scenarioList').style.display = 'none';
-      const s = scenarios[index];
-      document.getElementById('scenarioTitle').innerText = s.title;
-      document.getElementById('scenarioText').innerText = s.text;
-      document.getElementById('results').innerHTML = "<strong>Outcome:</strong> " + s.outcome;
-      document.getElementById('scenario').style.display = 'block';
+    // ===== State =====
+    let currentLesson = 0;
+    let currentExercise = 0;
+    let hearts = 5;
+    let xp = 0;
+    let streak = 0;
+    const dailyGoal = 50; // XP
+    const maxHearts = 5;
+
+    // Local Storage Keys
+    const storageKeys = {
+      xp: 'pillar2_xp',
+      streak: 'pillar2_streak',
+      lastDay: 'pillar2_lastDay',
+      hearts: 'pillar2_hearts'
+    };
+
+    // ===== Load and Save Progress =====
+    function loadProgress() {
+      xp = parseInt(localStorage.getItem(storageKeys.xp)) || 0;
+      streak = parseInt(localStorage.getItem(storageKeys.streak)) || 0;
+      hearts = parseInt(localStorage.getItem(storageKeys.hearts)) || maxHearts;
+      const lastDay = localStorage.getItem(storageKeys.lastDay);
+      const today = new Date().toDateString();
+
+      if (!lastDay) {
+        streak = 1;
+      } else {
+        const lastDate = new Date(lastDay);
+        const diffTime = new Date(today) - lastDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          streak++;
+          if (streak % 3 === 0) hearts = Math.min(hearts + 1, maxHearts);
+        } else if (diffDays > 1) {
+          streak = 1;
+          hearts = maxHearts;
+        }
+      }
+      localStorage.setItem(storageKeys.lastDay, today);
+      localStorage.setItem(storageKeys.streak, streak);
+      localStorage.setItem(storageKeys.hearts, hearts);
+      updateStats();
     }
 
-    function replay() {
-      document.getElementById('scenario').style.display = 'none';
-      document.getElementById('scenarioList').style.display = 'block';
+    function saveProgress() {
+      localStorage.setItem(storageKeys.xp, xp);
+      localStorage.setItem(storageKeys.streak, streak);
+      localStorage.setItem(storageKeys.hearts, hearts);
     }
-  </script>
-</body>
-</html>
+
+    // ===== UI Updates =====
+    function updateStats() {
+      document.getElementById('hearts').textContent = `Hearts: ${hearts}`;
+      document.getElementById('xp').textContent = `XP: ${xp} / ${dailyGoal} (Goal)`;
+      document.getElementById('streak').textContent = `Streak: ${streak} days`;
+      if (document.getElementById('hearts-lesson') && document.getElementById('xp-lesson')) {
+        document.getElementById('hearts-lesson').textContent = `Hearts: ${hearts}`;
+        document.getElementById('xp-lesson').textContent = `XP: ${xp} / ${dailyGoal} (Goal)`;
+      }
+      saveProgress();
+    }
+
+    function displayLessons() {
+      const home = document.getElementById('home');
+      const oldButtons = home.querySelectorAll('button.lesson-button');
+      oldButtons.forEach(btn => btn.remove());
+      lessons.forEach((lesson, index) => {
+        const button = document.createElement('button');
+        button.className = 'lesson-button';
+        button.textContent = lesson.title;
+        button.setAttribute('aria-label', `Start lesson: ${lesson.title}`);
+        button.onclick = () => startLesson(index);
+        home.appendChild(button);
+      });
+    }
+
+    function startLesson(lessonIndex) {
+      currentLesson = lessonIndex;
+      currentExercise = 0;
+      document.getElementById('home').style.display = 'none';
+      document.getElementById('lesson').style.display = 'block';
+      document.getElementById('lesson-title').textContent = lessons[currentLesson].title;
+      displayExercise();
+    }
+
+    function displayExercise() {
+      const exercise = lessons[currentLesson].exercises[currentExercise];
+      const content = document.getElementById('exercise-content');
+      const feedback = document.getElementById('feedback');
+      const nextBtn = document.getElementById('next-exercise');
+      const progress = document.getElementById('progress');
+      const recapQuiz = document.getElementById('recap-quiz');
+
+      content.innerHTML = `<p>${exercise.question}</p>`;
+      feedback.textContent = '';
+      feedback.className = '';
+      nextBtn.style.display = 'none';
+      progress.textContent = `Exercise ${currentExercise + 1} of ${lessons[currentLesson].exercises.length}`;
+      recapQuiz.style.display = 'none';
+
+      if (exercise.type === "tf") {
+        ['True', 'False'].forEach(val => {
+          const btn = document.createElement('button');
+          btn.className = 'choice';
+          btn.textContent = val;
+          btn.setAttribute('aria-pressed', 'false');
+          btn.onclick = () => checkAnswer(val === 'True');
+          content.appendChild(btn);
+        });
+      } else if (exercise.type === "mc") {
+        exercise.options.forEach(option => {
+          const btn = document.createElement('button');
+          btn.className =
