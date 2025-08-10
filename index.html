@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tax Quest: The Global Minimum Challenge</title>
+  <title>Tax Trek: Australia’s Global Minimum Tax Challenge</title>
   <style>
-    /* [Your existing CSS remains largely the same] */
     body {
       font-family: Arial, sans-serif;
       background: #f4f4f4;
@@ -75,6 +74,17 @@
       border-color: #f5c6cb;
       cursor: default;
     }
+    button.submit-btn {
+      background: #005566;
+      color: #fff;
+      margin-top: 10px;
+      width: 80%;
+      max-width: 400px;
+    }
+    button.submit-btn:hover, button.submit-btn:focus {
+      background: #003d4a;
+      box-shadow: 0 0 0 3px #66a3ad;
+    }
     input[type="text"] {
       width: 80%;
       max-width: 400px;
@@ -129,8 +139,24 @@
       display: none;
       margin-top: 20px;
     }
+    #exit-lesson {
+      margin-top: 15px;
+      background: #999;
+      color: white;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      width: auto;
+    }
+    #exit-lesson:hover, #exit-lesson:focus {
+      background: #666;
+      outline: none;
+      box-shadow: 0 0 0 3px #999;
+    }
     @media (max-width: 600px) {
-      button.lesson-button, button.choice, input[type="text"] {
+      button.lesson-button, button.choice, input[type="text"], button.submit-btn {
         width: 100%;
         max-width: 100%;
       }
@@ -139,13 +165,13 @@
 </head>
 <body>
   <div class="container" id="home" aria-label="Home screen with lessons">
-    <h1>Tax Quest: The Global Minimum Challenge</h1>
-    <p>Master Australia's Global Minimum Tax</p>
+    <h1>Tax Trek</h1>
+    <p>Australia’s Global Minimum Tax Challenge</p>
     <div id="stats" aria-live="polite">
       <span id="hearts">Hearts: 5</span> | <span id="xp">XP: 0</span> | <span id="streak">Streak: 0 days</span>
     </div>
     <h2>Lessons</h2>
-    <!-- Lesson buttons dynamically added here -->
+    <!-- Lesson buttons will be added here -->
   </div>
 
   <div class="container" id="lesson" style="display:none;" aria-label="Lesson view">
@@ -157,7 +183,7 @@
     <div class="exercise" id="exercise-content" role="region" aria-live="polite" aria-atomic="true"></div>
     <div id="feedback" aria-live="polite"></div>
     <button id="next-exercise" style="display:none;">Next Exercise</button>
-    <button id="exit-lesson" style="margin-top:15px; background:#999;">Exit Lesson</button>
+    <button id="exit-lesson">Exit Lesson</button>
     <div id="completion"></div>
     <div id="recap-quiz"></div>
   </div>
@@ -212,103 +238,8 @@
             explanation: "2024."
           }
         ]
-      },
-      {
-        title: "QDMTT Details",
-        exercises: [
-          {
-            type: "mc",
-            question: "QDMTT ensures Australia collects top-up tax on profits taxed below what rate?",
-            options: ["10%", "12%", "15%", "18%"],
-            answer: "15%",
-            explanation: "15%. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 15]"
-          },
-          {
-            type: "tf",
-            question: "True or False: QDMTT applies to domestic profits only.",
-            answer: true,
-            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 15]"
-          },
-          {
-            type: "fib",
-            question: "QDMTT is a Qualified Domestic Minimum ______ Tax.",
-            answer: "Top-up",
-            explanation: "Top-up. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 15]"
-          }
-        ]
-      },
-      {
-        title: "UTPR Mechanics",
-        exercises: [
-          {
-            type: "mc",
-            question: "UTPR applies from fiscal years starting on or after which date?",
-            options: ["January 1, 2024", "January 1, 2025", "January 1, 2026", "January 1, 2027"],
-            answer: "January 1, 2025",
-            explanation: "January 1, 2025. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 20]"
-          },
-          {
-            type: "tf",
-            question: "True or False: UTPR can deny deductions to collect top-up tax.",
-            answer: true,
-            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 20]"
-          },
-          {
-            type: "fib",
-            question: "UTPR stands for Undertaxed ______ Rule.",
-            answer: "Profits",
-            explanation: "Profits. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 20]"
-          }
-        ]
-      },
-      {
-        title: "IIR and Safe Harbours",
-        exercises: [
-          {
-            type: "mc",
-            question: "The Transitional CbCR Safe Harbour reduces top-up tax to zero if conditions are met using what data?",
-            options: ["CbC reporting", "Financial statements", "Tax returns", "Audit reports"],
-            answer: "CbC reporting",
-            explanation: "CbC reporting. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 25]"
-          },
-          {
-            type: "tf",
-            question: "True or False: IIR includes low-taxed income in the parent's taxable income.",
-            answer: true,
-            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 18]"
-          },
-          {
-            type: "fib",
-            question: "IIR is the Income Inclusion ______.",
-            answer: "Rule",
-            explanation: "Rule. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 18]"
-          }
-        ]
-      },
-      {
-        title: "Filing Obligations",
-        exercises: [
-          {
-            type: "mc",
-            question: "What return must be filed even if no tax is due?",
-            options: ["GloBE Information Return", "Income Tax Return", "VAT Return", "GST Return"],
-            answer: "GloBE Information Return",
-            explanation: "GloBE Information Return. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 30]"
-          },
-          {
-            type: "tf",
-            question: "True or False: Filing is required regardless of liability.",
-            answer: true,
-            explanation: "True. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 30]"
-          },
-          {
-            type: "fib",
-            question: "The GloBE ______ Return is mandatory.",
-            answer: "Information",
-            explanation: "Information. [Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024, Section 30]"
-          }
-        ]
       }
+      // Add other lessons similarly...
     ];
 
     // ===== State =====
@@ -317,15 +248,15 @@
     let hearts = 5;
     let xp = 0;
     let streak = 0;
-    const dailyGoal = 50; // XP
+    const dailyGoal = 50; // XP needed for daily reward
     const maxHearts = 5;
 
     // Local Storage Keys
     const storageKeys = {
-      xp: 'pillar2_xp',
-      streak: 'pillar2_streak',
-      lastDay: 'pillar2_lastDay',
-      hearts: 'pillar2_hearts'
+      xp: 'taxTrek_xp',
+      streak: 'taxTrek_streak',
+      lastDay: 'taxTrek_lastDay',
+      hearts: 'taxTrek_hearts'
     };
 
     // ===== Load and Save Progress =====
@@ -376,8 +307,8 @@
 
     function displayLessons() {
       const home = document.getElementById('home');
-      const oldButtons = home.querySelectorAll('button.lesson-button');
-      oldButtons.forEach(btn => btn.remove());
+      // Remove old buttons if any
+      home.querySelectorAll('button.lesson-button').forEach(btn => btn.remove());
       lessons.forEach((lesson, index) => {
         const button = document.createElement('button');
         button.className = 'lesson-button';
@@ -411,6 +342,7 @@
       nextBtn.style.display = 'none';
       progress.textContent = `Exercise ${currentExercise + 1} of ${lessons[currentLesson].exercises.length}`;
       recapQuiz.style.display = 'none';
+      recapQuiz.innerHTML = '';
 
       if (exercise.type === "tf") {
         ['True', 'False'].forEach(val => {
@@ -424,4 +356,184 @@
       } else if (exercise.type === "mc") {
         exercise.options.forEach(option => {
           const btn = document.createElement('button');
-          btn.className =
+          btn.className = 'choice';
+          btn.textContent = option;
+          btn.setAttribute('aria-pressed', 'false');
+          btn.onclick = () => checkAnswer(option);
+          content.appendChild(btn);
+        });
+      } else if (exercise.type === "fib") {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'fib-input';
+        input.setAttribute('aria-label', 'Fill in the blank answer');
+        content.appendChild(input);
+
+        const submitBtn = document.createElement('button');
+        submitBtn.textContent = 'Submit Answer';
+        submitBtn.className = 'submit-btn';
+        submitBtn.onclick = () => {
+          const userAnswer = input.value.trim();
+          if (!userAnswer) {
+            alert("Please enter an answer before submitting.");
+            input.focus();
+            return;
+          }
+          checkAnswer(userAnswer);
+        };
+        content.appendChild(submitBtn);
+
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') submitBtn.click();
+        });
+        input.focus();
+      }
+    }
+
+    function checkAnswer(userAnswer) {
+      const exercise = lessons[currentLesson].exercises[currentExercise];
+      const feedback = document.getElementById('feedback');
+      const nextBtn = document.getElementById('next-exercise');
+      const content = document.getElementById('exercise-content');
+      const choices = content.querySelectorAll('button.choice');
+      const input = document.getElementById('fib-input');
+
+      // Determine correctness
+      let isCorrect;
+      if (exercise.type === 'fib') {
+        isCorrect = userAnswer.toLowerCase() === exercise.answer.toLowerCase();
+      } else if (exercise.type === 'tf' || exercise.type === 'mc') {
+        isCorrect = userAnswer === exercise.answer;
+      } else {
+        isCorrect = false;
+      }
+
+      // Show feedback with explanation
+      feedback.className = isCorrect ? 'correct' : 'incorrect';
+      feedback.textContent = (isCorrect ? "Correct! " : "Incorrect. ") + exercise.explanation;
+
+      // Disable all choices and style
+      choices.forEach(btn => {
+        btn.disabled = true;
+        if (isCorrect && btn.textContent === userAnswer.toString()) {
+          btn.classList.add('correct');
+        } else if (!isCorrect && btn.textContent === userAnswer.toString()) {
+          btn.classList.add('incorrect');
+        }
+      });
+
+      // Disable input and submit button for FIB
+      if (input) {
+        input.disabled = true;
+        const submitBtn = content.querySelector('button.submit-btn');
+        if (submitBtn) submitBtn.disabled = true;
+      }
+
+      // Update XP and hearts
+      if (isCorrect) {
+        xp += 10;
+        if (xp >= dailyGoal && streak > 0) {
+          xp = xp % dailyGoal;
+          alert("Daily goal reached! +1 Heart (max 5)");
+          hearts = Math.min(hearts + 1, maxHearts);
+        }
+      } else {
+        hearts--;
+      }
+      updateStats();
+
+      if (hearts <= 0) {
+        displayRecapQuiz();
+        nextBtn.style.display = 'none';
+        return;
+      }
+
+      // Show next button
+      nextBtn.style.display = 'inline-block';
+      nextBtn.focus();
+    }
+
+    function displayRecapQuiz() {
+      const recapQuiz = document.getElementById('recap-quiz');
+      const exercise = lessons[currentLesson].exercises[currentExercise];
+      recapQuiz.style.display = 'block';
+      recapQuiz.innerHTML = `
+        <p>Out of hearts! Complete this recap to restore 2 hearts.</p>
+        <p>Question: What is the key rule related to "${exercise.question.split('?')[0]}"?</p>
+        <button class="choice" onclick="checkRecap('€750m or more')">€750m or more</button>
+        <button class="choice" onclick="checkRecap('15% minimum tax')">15% minimum tax</button>
+        <button class="choice" onclick="checkRecap('GloBE Rules')">GloBE Rules</button>
+      `;
+    }
+
+    function checkRecap(answer) {
+      const recapQuiz = document.getElementById('recap-quiz');
+      const feedback = document.createElement('div');
+      feedback.id = 'feedback';
+      const correctKey = lessons[currentLesson].exercises[currentExercise].explanation.match(/€750m|15%|GloBE/)[0];
+      const isCorrect = answer.includes(correctKey) || correctKey.includes(answer);
+
+      feedback.className = isCorrect ? 'correct' : 'incorrect';
+      feedback.textContent = isCorrect ? "Correct! Restoring 2 hearts." : "Incorrect. Try again or exit.";
+      recapQuiz.appendChild(feedback);
+
+      if (isCorrect) {
+        hearts = Math.min(hearts + 2, maxHearts);
+        updateStats();
+        setTimeout(() => {
+          recapQuiz.style.display = 'none';
+          feedback.remove();
+          displayExercise();
+        }, 1200);
+      } else {
+        setTimeout(() => {
+          if (confirm("Failed recap. Exit lesson?")) {
+            returnToHome();
+          } else {
+            feedback.remove();
+          }
+        }, 1200);
+      }
+    }
+
+    document.getElementById('next-exercise').addEventListener('click', () => {
+      currentExercise++;
+      if (currentExercise >= lessons[currentLesson].exercises.length) {
+        const bonusXp = 50;
+        xp += bonusXp;
+        const completion = document.getElementById('completion');
+        completion.style.display = 'block';
+        completion.innerHTML = `<p>🎉 Congratulations! Lesson completed! +${bonusXp} XP</p><button onclick="returnToHome()">Continue</button>`;
+        updateStats();
+        document.getElementById('exercise-content').innerHTML = '';
+        document.getElementById('feedback').textContent = '';
+        document.getElementById('next-exercise').style.display = 'none';
+      } else {
+        displayExercise();
+      }
+    });
+
+    document.getElementById('exit-lesson').addEventListener('click', () => {
+      if (confirm('Are you sure you want to exit the lesson? Your progress in this lesson will be lost.')) {
+        returnToHome();
+      }
+    });
+
+    function returnToHome() {
+      document.getElementById('lesson').style.display = 'none';
+      document.getElementById('home').style.display = 'block';
+      hearts = Math.min(hearts, maxHearts);
+      updateStats();
+      document.getElementById('completion').style.display = 'none';
+      document.getElementById('recap-quiz').style.display = 'none';
+      document.getElementById('feedback').textContent = '';
+      document.getElementById('exercise-content').innerHTML = '';
+      document.getElementById('next-exercise').style.display = 'none';
+    }
+
+    // ===== Initialize =====
+    loadProgress();
+    displayLessons();
+  </script>
+</body>
+</html>
