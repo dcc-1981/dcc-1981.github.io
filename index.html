@@ -1,332 +1,490 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pillar Two Challenge</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f4f6f8;
-      margin: 0;
-      padding: 2rem;
-      color: #333;
-    }
-    h1, h2 {
-      text-align: center;
-    }
-    .quiz-selector {
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    button {
-      padding: 0.6rem 1.2rem;
-      font-size: 1rem;
-      border: none;
-      border-radius: 5px;
-      background-color: #0078d4;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #005ea2;
-    }
-    .question-box {
-      max-width: 600px;
-      margin: auto;
-      background: white;
-      padding: 1.5rem;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    .options {
-      margin-top: 1rem;
-    }
-    .options button {
-      display: block;
-      width: 100%;
-      margin: 0.5rem 0;
-      background-color: #e1ecf4;
-      color: #333;
-    }
-    .options button.correct {
-      background-color: #c6f6d5;
-    }
-    .options button.incorrect {
-      background-color: #feb2b2;
-    }
-    .stats {
-      text-align: center;
-      margin-bottom: 1rem;
-      font-size: 1.1rem;
-    }
-    .score {
-      text-align: center;
-      margin-top: 1rem;
-      font-size: 1.2rem;
-    }
-    #recap-quiz {
-      display: none;
-      margin-top: 1rem;
-    }
-    #restart {
-      display: none;
-      margin-top: 1rem;
-    }
-    @media (max-width: 600px) {
-      .quiz-selector {
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pillar Two Challenge — 50 Questions</title>
+<style>
+  :root{--bg:#f4f6f8;--card:#fff;--brand:#0078d4;--muted:#555;--green:#2e7d32;--red:#b00020}
+  body{font-family:Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);margin:0;padding:24px;display:flex;justify-content:center}
+  .wrapper{width:100%;max-width:980px}
+  .card{background:var(--card);border-radius:10px;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,0.08)}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  h1{margin:0;color:var(--brand);font-size:1.2rem}
+  .meta{color:var(--muted);font-size:0.95rem}
+  .hud{display:flex;justify-content:space-between;align-items:center;margin:18px 0;gap:10px;flex-wrap:wrap}
+  .hud .item{background:#fbfbfb;padding:8px 12px;border-radius:8px;border:1px solid #eee}
+  #progress{min-width:200px}
+  #timer{font-weight:700}
+  #score{font-weight:700}
+  .question-area{display:grid;grid-template-columns:1fr 300px;gap:18px}
+  @media (max-width:920px){.question-area{grid-template-columns:1fr}}
+  .qcard{padding:18px;border-radius:8px;background:#fff;border:1px solid #f0f0f0;box-shadow:0 2px 8px rgba(0,0,0,0.03)}
+  .question-text{font-size:1.05rem;margin-bottom:12px}
+  .options{display:flex;flex-direction:column;gap:10px}
+  button.opt{padding:12px;border-radius:8px;border:1px solid #ddd;background:#fbfdff;text-align:left;cursor:pointer;font-size:0.98rem}
+  button.opt:hover{background:#eef6ff}
+  button.opt.correct{background:#d4edda;border-color:#9ae6b4;color:var(--green)}
+  button.opt.wrong{background:#f8d7da;border-color:#f5a0a0;color:var(--red)}
+  button.opt[disabled]{opacity:0.86;cursor:not-allowed}
+  .feedback{margin-top:12px;padding:10px;border-radius:8px;font-weight:600;display:none}
+  .feedback.ok{background:#e6f4ea;color:var(--green)}
+  .feedback.bad{background:#fdecea;color:var(--red)}
+  .side{display:flex;flex-direction:column;gap:12px}
+  .stat{padding:12px;border-radius:8px;background:#fafafa;border:1px solid #f0f0f0}
+  .recap{display:none;padding:12px;border-radius:8px;background:#fff;border:1px solid #f0f0f0}
+  .final{display:none;text-align:center;padding:18px}
+  .btn{background:var(--brand);color:#fff;padding:10px 12px;border-radius:8px;border:0;cursor:pointer}
+</style>
 </head>
 <body>
-  <h1>Pillar Two Challenge</h1>
-  <h2>Select a Section</h2>
-  <div class="quiz-selector">
-    <button onclick="startQuiz('qdmt')">QDMTT</button>
-    <button onclick="startQuiz('iir')">IIR</button>
-    <button onclick="startQuiz('sttr')">STTR</button>
-  </div>
-  <div class="question-box" id="quiz-box" style="display:none;" aria-live="polite" role="region">
-    <div class="stats" id="stats">
-      <span id="hearts">Hearts: 5</span> | <span id="xp">XP: 0</span> | <span id="streak">Streak: 0 days</span>
+  <div class="wrapper">
+    <div class="card">
+      <header>
+        <h1>Pillar Two Challenge — 50 questions</h1>
+        <div class="meta">Realistic Australian Pillar Two (GloBE / QDMTT / IIR / STTR) practice — randomized each run.</div>
+      </header>
+
+      <div class="hud">
+        <div id="progress" class="item">Question 0 of 50</div>
+        <div id="score" class="item">Score: 0</div>
+        <div id="timer" class="item">Time: 30</div>
+      </div>
+
+      <div class="question-area">
+        <section class="qcard" aria-live="polite">
+          <div id="question-wrapper">
+            <!-- Questions are inserted here -->
+          </div>
+          <div id="feedback" class="feedback"></div>
+        </section>
+
+        <aside class="side">
+          <div class="stat"><strong id="hearts">Hearts: 5</strong><div style="font-size:0.9rem;color:var(--muted)">Lose one for each incorrect answer; recap to restore.</div></div>
+          <div class="stat"><strong id="xp">XP: 0</strong><div style="font-size:0.9rem;color:var(--muted)">+10 XP per correct</div></div>
+          <div class="stat"><strong id="streak">Streak: 0 days</strong><div style="font-size:0.9rem;color:var(--muted)">Streak persists in localStorage</div></div>
+          <div class="recap" id="recap-box">
+            <div><strong>Recap question (restore 2 hearts)</strong></div>
+            <div id="recap-q" style="margin-top:8px"></div>
+            <div id="recap-choices" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
+          </div>
+        </aside>
+      </div>
+
+      <div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div id="session-summary" style="color:var(--muted)"></div>
+        <div>
+          <button id="next-btn" class="btn" style="display:none">Next</button>
+          <button id="restart-btn" class="btn" style="background:#eee;color:#000;display:none">Restart Section</button>
+        </div>
+      </div>
+
+      <div id="final" class="final">
+        <h2>Quiz complete</h2>
+        <div id="final-score" style="font-size:1.1rem;margin-bottom:8px"></div>
+        <div id="final-acc" style="color:var(--muted);margin-bottom:12px"></div>
+        <button id="play-again" class="btn">Play again (shuffle)</button>
+      </div>
+
     </div>
-    <div id="question"></div>
-    <div class="options" id="options"></div>
-    <div class="score" id="score"></div>
-    <div id="recap-quiz"></div>
-    <button id="restart" onclick="startQuiz(currentSection)">Restart Section</button>
   </div>
 
-  <script>
-    const quizzes = {
-      qdmt: [
-        { question: "What does QDMTT stand for?", options: ["Qualified Domestic Minimum Top-up Tax", "Quick Domestic Margin Tax", "Quarterly Deferred Minimum Tax", "Qualified Deferred Margin Transfer"], answer: 0, explanation: "QDMTT stands for Qualified Domestic Minimum Top-up Tax, ensuring local profits are taxed at 15% as per Section 15 of the Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024." },
-        { question: "Which jurisdiction applies QDMTT?", options: ["Ultimate parent", "Intermediate parent", "Local jurisdiction", "Foreign affiliate"], answer: 2, explanation: "QDMTT is applied by the local jurisdiction to enforce the minimum tax rate, per Section 15." },
-        { question: "QDMTT is designed to ensure what?", options: ["Local profits are taxed at the minimum rate", "Foreign income is exempt", "Parent entities pay more tax", "Losses are carried forward"], answer: 0, explanation: "It ensures local profits meet the 15% minimum rate, as outlined in Section 15." },
-        { question: "What is the minimum effective tax rate under Pillar Two?", options: ["10%", "15%", "20%", "25%"], answer: 1, explanation: "The minimum effective tax rate is 15%, as enacted in Section 10." },
-        { question: "QDMTT applies before which other rule?", options: ["STTR", "IIR", "GILTI", "CFC"], answer: 1, explanation: "QDMTT applies before IIR, per the priority rules in Section 15." },
-        { question: "Does QDMTT apply to Australian entities in a multinational group with revenue ≥ €750M?", options: ["Yes", "No", "Only if foreign-owned", "Only if listed"], answer: 0, explanation: "Yes, QDMTT applies to such entities, per Section 5 eligibility criteria." },
-        { question: "What is the purpose of QDMTT?", options: ["To collect top-up tax locally before foreign jurisdictions apply IIR or UTPR", "To exempt domestic entities", "To reduce compliance burden", "To replace corporate income tax"], answer: 0, explanation: "It collects top-up tax locally first, as per Section 15." },
-        { question: "Which rule takes priority: QDMTT or IIR?", options: ["QDMTT", "IIR", "UTPR", "None"], answer: 0, explanation: "QDMTT takes priority, per Section 15 priority rules." },
-        { question: "Is Australia’s QDMTT a qualified regime under OECD standards?", options: ["Yes", "No", "Pending review", "Only for domestic groups"], answer: 0, explanation: "Yes, it meets OECD standards, per Section 15 compliance." },
-        { question: "What is the role of the GloBE Information Return in QDMTT compliance?", options: ["It replaces tax returns", "It reports jurisdictional ETR and top-up tax", "It determines eligibility for QDMTT", "It calculates payroll tax"], answer: 1, explanation: "It reports ETR and top-up tax, per Section 30." },
-        { question: "Can QDMTT result in no top-up tax if the jurisdictional ETR is ≥ 15%?", options: ["Yes", "No", "Only if approved by the ATO", "Only for listed entities"], answer: 0, explanation: "Yes, if ETR meets or exceeds 15%, per Section 15." },
-        { question: "Which accounting standard is used to determine covered taxes under QDMTT?", options: ["IFRS", "Australian GAAP", "OECD-defined GloBE standard", "US GAAP"], answer: 2, explanation: "The OECD-defined GloBE standard is used, per Section 15." },
-        { question: "Does QDMTT apply to passive income?", options: ["Yes, if included in covered taxes", "No, passive income is excluded", "Only if derived from foreign sources", "Only if taxed at source"], answer: 0, explanation: "Yes, if included, per Section 15." },
-        { question: "What is the minimum ETR threshold triggering QDMTT?", options: ["10%", "12.5%", "15%", "20%"], answer: 2, explanation: "The threshold is 15%, per Section 15." },
-        { question: "Which rule applies first in Australia’s Pillar Two framework?", options: ["QDMTT", "IIR", "UTPR", "STTR"], answer: 0, explanation: "QDMTT applies first, per Section 15 priority." },
-        { question: "Does QDMTT apply to Australian branches of foreign entities?", options: ["Yes", "No", "Only if profitable", "Only if tax-exempt"], answer: 0, explanation: "Yes, per Section 5 eligibility." },
-        { question: "Is QDMTT calculated on a jurisdictional basis?", options: ["Yes", "No", "Only for listed entities", "Only for trusts"], answer: 0, explanation: "Yes, per Section 15." },
-        { question: "Can QDMTT be reduced by foreign tax credits?", options: ["No", "Yes", "Only if approved by the ATO", "Only for US entities"], answer: 0, explanation: "No, per Section 15 rules." },
-        { question: "Does QDMTT apply to consolidated financial statements?", options: ["Yes", "No", "Only if audited", "Only if IFRS-compliant"], answer: 0, explanation: "Yes, per Section 15." },
-        { question: "Is QDMTT part of Australia’s 2024 enacted legislation?", options: ["Yes", "No", "Only in draft", "Only for 2025 onwards"], answer: 0, explanation: "Yes, enacted in 2024, per Section 1." }
-      ],
-      iir: [
-        { question: "What does IIR stand for?", options: ["International Income Reporting", "Income Inclusion Rule", "Indirect Income Regulation", "Inclusive Income Rate"], answer: 1, explanation: "IIR stands for Income Inclusion Rule, targeting low-taxed foreign income, per Section 18." },
-        { question: "Which entity applies the IIR?", options: ["Ultimate parent", "Local branch", "Foreign affiliate", "Tax authority"], answer: 0, explanation: "The ultimate parent entity applies IIR, as per Section 18." },
-        { question: "IIR targets low-taxed income of which entities?", options: ["Domestic subsidiaries", "Foreign subsidiaries", "Individuals", "Trusts"], answer: 1, explanation: "IIR focuses on foreign subsidiaries, per Section 18." },
-        { question: "IIR is applied after which rule?", options: ["QDMTT", "STTR", "CFC", "GILTI"], answer: 0, explanation: "IIR applies after QDMTT, per Section 18 priority rules." },
-        { question: "What is the primary goal of IIR?", options: ["To simplify tax reporting", "To ensure minimum taxation of foreign income", "To eliminate double taxation", "To promote transparency"], answer: 1, explanation: "The goal is to ensure minimum taxation of foreign income, per Section 18." },
-        { question: "What is the minimum ETR threshold for IIR to apply?", options: ["10%", "12.5%", "15%", "20%"], answer: 2, explanation: "The threshold is 15%, per Section 18." },
-        { question: "Does IIR apply to income earned by foreign subsidiaries?", options: ["Yes", "No", "Only if repatriated", "Only if tax-exempt"], answer: 0, explanation: "Yes, per Section 18." },
-        { question: "Which entity pays top-up tax under IIR?", options: ["Australian parent", "Foreign subsidiary", "ATO", "Ultimate parent"], answer: 0, explanation: "The Australian parent pays, per Section 18." },
-        { question: "Is IIR calculated using GloBE rules?", options: ["Yes", "No", "Only for listed entities", "Only for trusts"], answer: 0, explanation: "Yes, per Section 18." },
-        { question: "Does Australia’s IIR apply to passive income?", options: ["Yes", "No", "Only if derived from royalties", "Only if taxed at source"], answer: 0, explanation: "Yes, per Section 18." },
-        { question: "Can IIR apply if QDMTT has already been applied?", options: ["No", "Yes", "Only if approved by ATO", "Only for foreign-owned entities"], answer: 0, explanation: "No, per Section 18 priority rules." },
-        { question: "Is IIR part of Australia’s 2024 legislation?", options: ["Yes", "No", "Only in draft", "Only for 2025 onwards"], answer: 0, explanation: "Yes, enacted in 2024, per Section 1." },
-        { question: "Does IIR apply to Australian entities with foreign subsidiaries?", options: ["Yes", "No", "Only if consolidated", "Only if listed"], answer: 0, explanation: "Yes, per Section 18." },
-        { question: "What is the role of the GloBE Information Return in IIR?", options: ["It reports ETR and top-up tax", "It replaces tax returns", "It determines residency", "It calculates payroll tax"], answer: 0, explanation: "It reports ETR and top-up tax, per Section 30." },
-        { question: "Can IIR result in no top-up tax if ETR ≥ 15%?", options: ["Yes", "No", "Only if approved by ATO", "Only for listed entities"], answer: 0, explanation: "Yes, if ETR meets or exceeds 15%, per Section 18." },
-        { question: "Does IIR apply to income taxed under a qualified domestic regime?", options: ["No", "Yes", "Only if below threshold", "Only if passive"], answer: 0, explanation: "No, per Section 18." },
-        { question: "Is IIR applied on a jurisdictional basis?", options: ["Yes", "No", "Only for trusts", "Only for listed entities"], answer: 0, explanation: "Yes, per Section 18." },
-        { question: "Can IIR be reduced by foreign tax credits?", options: ["No", "Yes", "Only if approved by ATO", "Only for US entities"], answer: 0, explanation: "No, per Section 18 rules." },
-        { question: "Does IIR apply to consolidated financial statements?", options: ["Yes", "No", "Only if audited", "Only if IFRS-compliant"], answer: 0, explanation: "Yes, per Section 18." },
-        { question: "Is IIR triggered by low-taxed foreign income?", options: ["Yes", "No", "Only if repatriated", "Only if exempt"], answer: 0, explanation: "Yes, per Section 18." }
-      ],
-      sttr: [
-        { question: "What does STTR stand for?", options: ["Standard Transfer Tax Rule", "Subject to Tax Rule", "Statutory Tax Transparency Regulation", "Simplified Tax Treaty Rule"], answer: 1, explanation: "STTR stands for Subject to Tax Rule, targeting low-taxed related party payments, per Section 25." },
-        { question: "STTR applies to which type of payments?", options: ["Interest, royalties, and service fees", "Dividends and capital gains", "Inventory transfers", "Payroll"], answer: 0, explanation: "It applies to interest, royalties, and service fees, per Section 25." },
-        { question: "Which jurisdiction applies STTR?", options: ["Payer jurisdiction", "Payee jurisdiction", "Parent jurisdiction", "Tax haven jurisdiction"], answer: 0, explanation: "The payer jurisdiction applies STTR, per Section 25." },
-        { question: "What is the minimum tax rate threshold under STTR?", options: ["5%", "9%", "15%", "20%"], answer: 1, explanation: "The threshold is 9%, per Section 25." },
-        { question: "Does STTR override QDMTT?", options: ["No", "Yes", "Only if approved by ATO", "Only for foreign-owned entities"], answer: 0, explanation: "No, per Section 25 priority rules." },
-        { question: "Is STTR part of Australia’s 2024 legislation?", options: ["Yes", "No", "Only in draft", "Only for 2025 onwards"], answer: 0, explanation: "Yes, enacted in 2024, per Section 1." },
-        { question: "STTR applies to payments made to which entities?", options: ["Related parties in low-tax jurisdictions", "Unrelated parties", "Domestic subsidiaries", "Trusts"], answer: 0, explanation: "Related parties in low-tax jurisdictions, per Section 25." },
-        { question: "Can STTR apply if IIR has already been applied?", options: ["No", "Yes", "Only if approved by ATO", "Only for listed entities"], answer: 0, explanation: "No, per Section 25 priority rules." },
-        { question: "Is STTR calculated on a payment-by-payment basis?", options: ["Yes", "No", "Only if consolidated", "Only if audited"], answer: 0, explanation: "Yes, per Section 25." },
-        { question: "Does STTR apply to service payments?", options: ["Yes", "No", "Only if passive", "Only if capitalized"], answer: 0, explanation: "Yes, per Section 25." },
-        { question: "Can STTR result in additional tax collection?", options: ["Yes", "No", "Only if approved by ATO", "Only for listed entities"], answer: 0, explanation: "Yes, per Section 25." },
-        { question: "Is STTR triggered by payments taxed below 9%?", options: ["Yes", "No", "Only if passive", "Only if exempt"], answer: 0, explanation: "Yes, per Section 25." },
-        { question: "Does STTR apply to payments made from Australia?", options: ["Yes", "No", "Only if foreign-owned", "Only if listed"], answer: 0, explanation: "Yes, per Section 25." },
-        { question: "Is STTR part of the OECD’s Pillar Two framework?", options: ["Yes", "No", "Only in draft", "Only for EU"], answer: 0, explanation: "Yes, per Section 25." },
-        { question: "Does STTR apply to payments taxed under a qualified regime?", options: ["No", "Yes", "Only if below threshold", "Only if passive"], answer: 0, explanation: "No, per Section 25." }
-      ]
-    };
+<script>
+/* ---------- Configuration ---------- */
+const QUESTIONS_COUNT = 50;
+const TIME_PER_Q = 30; // seconds
+const MAX_HEARTS = 5;
+const XP_PER_CORRECT = 10;
+const HEARTS_RESTORE_ON_RECAP = 2;
 
-    let currentQuiz = [];
-    let currentIndex = 0;
-    let score = 0;
-    let hearts = 5;
-    let xp = 0;
-    let streak = 0;
-    let currentSection = '';
+/* ---------- Persistent state (localStorage keys) ---------- */
+const STORAGE = {
+  hearts: 'pillar2_hearts',
+  xp: 'pillar2_xp',
+  streak: 'pillar2_streak',
+  lastDay: 'pillar2_lastDay'
+};
 
-    // Local Storage Keys
-    const storageKeys = {
-      hearts: 'pillar2_hearts',
-      xp: 'pillar2_xp',
-      streak: 'pillar2_streak',
-      lastDay: 'pillar2_lastDay'
-    };
+/* ---------- Quiz data (50 realistic Australian Pillar Two questions) ---------- */
+/* Each question: { q: 'text', choices: [...], answer: index (0-based), explanation: '...' } */
+const QUESTION_BANK = [
+  /* QDMTT group (20) */
+  { q: "What does QDMTT stand for in Australia's Pillar Two context?", choices:["Qualified Domestic Minimum Top-up Tax","Quarterly Domestic Minimum Transfer Tax","Qualified Domestic Margin Tax","Quick Domestic Minimum Tax"], answer:0, explanation:"QDMTT = Qualified Domestic Minimum Top-up Tax — domestic top-up to reach the global minimum."},
+  { q: "Under Pillar Two, what is the GloBE minimum effective tax rate (ETR)?", choices:["10%","12.5%","15%","20%"], answer:2, explanation:"The Pillar Two GloBE minimum ETR is 15%."},
+  { q: "Which revenue threshold commonly determines if an MNE group is in scope of the GloBE rules?", choices:["€50 million","€200 million","€750 million","€1 billion"], answer:2, explanation:"The consolidated revenue threshold in the model rules is €750 million."},
+  { q: "The QDMTT is intended to do which of the following?", choices:["Replace corporate tax","Collect local top-up tax before IIR/UTPR apply","Exempt domestic subsidiaries","Increase withholding rates"], answer:1, explanation:"QDMTT collects domestic top-up tax before other top-up rules like IIR/UTPR."},
+  { q: "If a jurisdiction's jurisdictional ETR is already at or above 15%, QDMTT will:", choices:["Still collect top-up","Not collect a top-up","Collect half the top-up","Only apply to listed entities"], answer:1, explanation:"No top-up is collected if jurisdictional ETR ≥ 15%."},
+  { q: "QDMTT is calculated on what basis?", choices:["Entity by entity","Jurisdictional basis","Global consolidated basis","Per transaction"], answer:1, explanation:"QDMTT operates on a jurisdictional basis."},
+  { q: "Which reporting return is used to report jurisdictional ETR and top-up tax under GloBE? ", choices:["GloBE Information Return","Corporate Tax Return","Payroll Return","GST Return"], answer:0, explanation:"The GloBE Information Return reports jurisdictional ETR and top-up tax."},
+  { q: "Can QDMTT be reduced by foreign tax credits in the Australian implementation?", choices:["Yes","No","Only with ATO approval","Only for dividends"], answer:1, explanation:"The domestic top-up is designed not to be reduced by foreign tax credits (top-up is to reach 15%)."},
+  { q: "Which financial statements basis is generally used for GloBE income calculations?", choices:["US GAAP","Local tax returns only","IFRS / accounting basis aligned with GloBE","Cash-basis only"], answer:2, explanation:"GloBE uses an accounting-based approach (IFRS-compatible) as the model requires alignment with accounting carrying values."},
+  { q: "When Australia implements a QDMTT, which rule still takes priority after QDMTT?", choices:["IIR","UTPR","STTR","None — QDMTT is last"], answer:0, explanation:"QDMTT is applied before the Income Inclusion Rule (IIR) under the priority rules."},
+  { q: "Does QDMTT apply to branches of foreign entities in Australia under the Australian rules?", choices:["Yes","No","Only if branch files consolidated statements","Only for listed branches"], answer:0, explanation:"Australia's design applies to domestic branches where applicable."},
+  { q: "Is the QDMTT a treaty-based rule?", choices:["Yes","No — it's domestic legislation","Only in the OECD model","Only for developing countries"], answer:1, explanation:"QDMTT is domestic legislation designed to interact with international rules."},
+  { q: "Which document sets out the detailed design of QDMTT calculations in Australia?", choices:["The GloBE Model Rules","Taxation (Multinational—Global and Domestic Minimum Tax) Rules 2024","A TO internal memo","An OECD press release"], answer:1, explanation:"Australia's Rules 2024 set out the detailed calculations for the domestic minimum tax."},
+  { q: "A jurisdictional ETR is lower than 15% because of a temporary tax incentive. Under GloBE/QDMTT, this can lead to:", choices:["A permanent exemption","A top-up tax to reach 15%","Increased tax credits abroad","A requirement to deregister"], answer:1, explanation:"Top-up tax applies to bring ETR up to the minimum where required."},
+  { q: "Which of the following is included when calculating 'covered taxes' for GloBE purposes?", choices:["Payroll tax only","Corporate income tax and similar covered taxes","Dividend withholding taxes only","GST"], answer:1, explanation:"Covered taxes relate to corporate income taxes and specific similar taxes as defined by GloBE rules."},
+  { q: "Is passive income always excluded from GloBE calculations?", choices:["Yes — always excluded","No — passive income can be included","Only if under a de minimis","Only for financial institutions"], answer:1, explanation:"Passive income can be included where included in covered taxes and GloBE calculations."},
+  { q: "Does the QDMTT remove the need to consider IIR at all?", choices:["Yes — QDMTT replaces IIR","No — IIR may still apply if QDMTT doesn't fully eliminate low-tax outcomes","Yes, for multinational groups only","Only if approved by OECD"], answer:1, explanation:"QDMTT collects local top-up first; IIR may still operate depending on residual low-taxed income."},
+  { q: "When is the first practical lodgement year Australian guidance suggests for GloBE-related reporting (high-level)?", choices:["2023","2024/2025 period","2030","No reporting required"], answer:1, explanation:"Australia's implementation timelines point to reporting frameworks being in the 2024–2026 window (first lodgement cycles around 2025/2026 for 2024 fiscal year positions)."},
+  { q: "Which international body published the GloBE model rules that underpin QDMTT design? ", choices:["World Bank","OECD","IMF","UN"], answer:1, explanation:"The OECD published the GloBE model rules for the global minimum tax." },
 
-    function loadProgress() {
-      hearts = parseInt(localStorage.getItem(storageKeys.hearts)) || 5;
-      xp = parseInt(localStorage.getItem(storageKeys.xp)) || 0;
-      streak = parseInt(localStorage.getItem(storageKeys.streak)) || 0;
-      const lastDay = localStorage.getItem(storageKeys.lastDay);
-      const today = new Date().toDateString();
+  /* IIR group (15) */
+  { q: "What does IIR stand for?", choices:["International Income Report","Income Inclusion Rule","Indirect Income Regulation","Income Internal Return"], answer:1, explanation:"IIR = Income Inclusion Rule — one of the Pillar Two top-up instruments."},
+  { q: "Which entity applies the IIR in practice?", choices:["Local subsidiary","Ultimate parent entity (in many jurisdictions)","Tax authority of source country","Foreign affiliate"], answer:1, explanation:"IIR is normally applied by the jurisdiction of the ultimate parent under the model rules."},
+  { q: "IIR targets low-taxed income of which entities?", choices:["Domestic affiliates only","Foreign subsidiaries / low-taxed foreign profit","Individuals","Independent contractors"], answer:1, explanation:"IIR is designed to capture low-taxed foreign income within MNE groups."},
+  { q: "If a parent applies IIR and collects top-up tax, which country typically was expected to act first (subject to priority rules)?", choices:["QDMTT jurisdiction","IIR jurisdiction (parent) after QDMTT","UTPR","Source country under STTR"], answer:1, explanation:"The IIR applies after consideration of any qualified domestic top-up (QDMTT) per priority rules."},
+  { q: "Can IIR top-up be impacted by the Substance-based Income Exclusion (SBIE)?", choices:["No — SBIE not relevant","Yes — SBIE can reduce profits subject to top-up","Only for SMEs","Only for banks"], answer:1, explanation:"SBIE reduces the GloBE effective profit base in recognition of certain routine returns to tangible assets and payroll."},
+  { q: "Is IIR applied on an entity-by-entity or jurisdictional basis for ETR testing?", choices:["Entity-by-entity","Jurisdictional aggregation (GloBE jurisdictional ETR)","Global combined only","Per-transaction"], answer:2, explanation:"The GloBE rules use jurisdictional ETR calculations, and IIR works off those GloBE results."},
+  { q: "Does Australia plan to require a separate IIR/UTPR tax return for entities subject to top-up tax?", choices:["No plans","Yes — ATO developing Australian IIR/UTPR tax return forms","Only if requested","Only for listed groups"], answer:1, explanation:"ATO guidance indicates specific returns (AIUTR / DMTR) are being developed for administration."},
+  { q: "If ultimate parent jurisdiction applies IIR but the local jurisdiction has an effective QDMTT that already collected a top-up, what happens?", choices:["Double collect — both collect","IIR reduces for QDMTT already collected","Local refunds to parent","Nothing — they ignore each other"], answer:1, explanation:"IIR typically accounts for top-ups already collected domestically under a qualified regime — QDMTT reduces IIR top-up need."},
+  { q: "Which entity is primarily responsible for calculating GloBE ETRs for a group?", choices:["Each local subsidiary independently","The MNE group (lead entity) typically calculates jurisdictional ETRs and files the GloBE information return","Local tax authorities","OECD"], answer:1, explanation:"MNE groups compute GloBE results and file information returns per rules and guidance."},
+  { q: "Can an IIR result in no additional tax if the group-wide ETR >= 15%?", choices:["Yes","No — IIR always levies","Only with ATO permission","Only for manufacturing firms"], answer:0, explanation:"If ETR meets or exceeds 15%, no top-up arises under the GloBE rules."},
+  { q: "Do GloBE rules allow certain tax credits to reduce top-up tax for IIR calculation?", choices:["No credits allowed","Some tax credits and adjustments per GloBE rules are recognised","Only foreign tax credits for dividends","Only payroll credits"], answer:1, explanation:"GloBE contains rules for recognising covered taxes and credits as part of the ETR calculation."},
+  { q: "Is IIR's objective to ensure minimum taxation of foreign income or domestic income?", choices:["Domestic only","Foreign low-taxed income of MNE groups","Individual taxpayers","State taxes"], answer:1, explanation:"IIR targets low-taxed foreign income to ensure a minimum global level of tax."},
+  { q: "If the ultimate parent is in a jurisdiction that has not adopted IIR, can another jurisdiction apply a qualified IIR?", choices:["No — only ultimate parent can","Some jurisdictions implement domestic IIR variants; jurisdictional implementation varies","Only the OECD can decide","Only the HQ country"], answer:1, explanation:"Different countries may implement IIR domestically; implementation details and responsibilities vary by jurisdiction."},
+  { q: "When does IIR interact with the UTPR (Undertaxed Profits Rule)?", choices:["UTPR applies before IIR","IIR applies before UTPR — UTPR acts as a backstop if IIR doesn't capture top-up","They never interact","Only with STTR"], answer:1, explanation:"IIR is primary; UTPR is a backstop reallocating top-up if IIR doesn't collect it."},
 
-      if (!lastDay) {
-        streak = 1;
+  /* STTR group (10) */
+  { q: "What does STTR stand for?", choices:["Standard Tax Treaty Rule","Subject to Tax Rule","Supplementary Treaty Rule","Source Tax Transfer Rule"], answer:1, explanation:"STTR = Subject to Tax Rule — treaty-based rule to protect source countries."},
+  { q: "What types of payments does the STTR typically target?", choices:["Interest, royalties and certain service payments","Dividends and capital gains","Salary payments","VAT/GST"], answer:0, explanation:"STTR focuses on certain intra-group payments including interest, royalties and service fees."},
+  { q: "What is the commonly-cited minimum nominal tax threshold for STTR to operate (subject-to-tax)?", choices:["5%","9%","15%","20%"], answer:1, explanation:"STTR in model rules targets payments taxed below a nominal 9% rate (adjusted for base reductions)."},
+  { q: "Is the STTR implemented via domestic law or treaty mechanisms?", choices:["Treaty-based — via a multilateral convention/MLI","Domestic statute only","By the UN","By individual transactions"], answer:0, explanation:"STTR is treaty-based and implemented through a multilateral instrument implementing STTR provisions."},
+  { q: "Which jurisdiction applies the STTR top-up?", choices:["Payer (source) jurisdiction","Payee (recipient) jurisdiction","Ultimate parent jurisdiction","OECD"], answer:0, explanation:"The payer (source) jurisdiction can apply STTR to protect taxing rights on certain payments."},
+  { q: "Does STTR override QDMTT or IIR automatically?", choices:["Yes — STTR always overrides","No — priority rules determine order; STTR is separate and treaty-based","Only if OECD says so","Only for developing countries"], answer:1, explanation:"STTR is separate; priority/interaction rules determine the application relative to other rules."},
+  { q: "STTR generally excludes which of these payment types?", choices:["Interest","Royalties","Dividends","Service fees"], answer:2, explanation:"Dividends are typically excluded from STTR scope; it focuses on payments like interest and royalties."},
+  { q: "Is an STTR top-up collected by the recipient country?", choices:["Yes — recipient collects","No — source jurisdiction can impose additional tax","Collected by OECD","Split between countries"], answer:1, explanation:"STTR allows the source jurisdiction to apply an additional tax on covered payments taxed below the threshold in the recipient jurisdiction."},
+  { q: "Does STTR apply only to cross-border related-party payments or also to unrelated parties?", choices:["Only related-party cross-border payments","Also unrelated domestic payments","All payments irrespective of relation","Only multinational head payments"], answer:0, explanation:"STTR targets related-party cross-border payments where the recipient is lightly taxed."},
+  { q: "For STTR to operate between two countries, what instrument is typically required?", choices:["A bilateral or multilateral treaty instrument implementing STTR (e.g., MLI)","Nothing — unilateral legislation suffices","A court order","OECD approval"], answer:0, explanation:"Implementation requires treaty-based adoption (MLI/Convention or bilateral adoption)."},
+
+
+  /* Mixed / technical (5) */
+  { q: "What is the Substance-based Income Exclusion (SBIE) designed to do?", choices:["Exclude passive income from GloBE","Exclude a routine return on tangible assets/payroll from the top-up base","Exclude all tax incentives","Allow smaller groups to opt out"], answer:1, explanation:"SBIE removes a routine return on tangible assets and payroll from the profit subject to top-up, preserving incentives for real investment."},
+  { q: "Which filing documents/report are groups required to prepare under GloBE to show results (name)?", choices:["GloBE Information Return","Corporate Income Tax Return","Payroll Return","Country-by-Country report only"], answer:0, explanation:"The GloBE Information Return is used to report jurisdictional ETRs and top-up amounts."},
+  { q: "Which currency threshold determines an MNE is in scope of GloBE in the model rules (consolidated revenue) — nominally?", choices:["€100m","€250m","€750m","€2bn"], answer:2, explanation:"The model rules use a consolidated revenue threshold of €750 million."},
+  { q: "If an MNE's jurisdictional ETR is 12% in one jurisdiction and 18% in another, what does GloBE aim to do?", choices:["Raise the 12% jurisdiction to 15% via top-up or reallocation","Lower the 18% jurisdiction","Eliminate the 12% jurisdiction","Only affect the 18% jurisdiction"], answer:0, explanation:"GloBE aims to top-up low-ETR jurisdictions to the agreed minimum (15%)."},
+  { q: "Which international organisation published most of the technical guidance and model rules for Pillar Two?", choices:["IMF","OECD","World Bank","United Nations"], answer:1, explanation:"The OECD is the author of the model GloBE rules and supporting guidance."}
+];
+/* ---------- End of QUESTION_BANK ---------- */
+
+/* --- derived/shuffle --- */
+let questions = [];
+let currentIndex = 0;
+let score = 0;
+let hearts = MAX_HEARTS;
+let xp = 0;
+let streak = 0;
+let lastDay = null;
+let timerRef = null;
+let timeLeft = TIME_PER_Q;
+let wrongList = []; // store indices of wrong answers for recap
+
+/* ---------- DOM ---------- */
+const progressEl = document.getElementById('progress');
+const scoreEl = document.getElementById('score');
+const timerEl = document.getElementById('timer');
+const questionWrapper = document.getElementById('question-wrapper');
+const feedbackEl = document.getElementById('feedback');
+const heartsEl = document.getElementById('hearts');
+const xpEl = document.getElementById('xp');
+const streakEl = document.getElementById('streak');
+const recapBox = document.getElementById('recap-box');
+const recapQ = document.getElementById('recap-q');
+const recapChoices = document.getElementById('recap-choices');
+const nextBtn = document.getElementById('next-btn');
+const restartBtn = document.getElementById('restart-btn');
+const sessionSummary = document.getElementById('session-summary');
+const finalBox = document.getElementById('final');
+const finalScore = document.getElementById('final-score');
+const finalAcc = document.getElementById('final-acc');
+const playAgainBtn = document.getElementById('play-again');
+
+/* ---------- Utilities ---------- */
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]] } return arr; }
+
+function persist(){
+  try{
+    localStorage.setItem(STORAGE.hearts, String(hearts));
+    localStorage.setItem(STORAGE.xp, String(xp));
+    localStorage.setItem(STORAGE.streak, String(streak));
+    localStorage.setItem(STORAGE.lastDay, String(lastDay));
+  }catch(e){}
+}
+
+function loadPersist(){
+  try{
+    hearts = parseInt(localStorage.getItem(STORAGE.hearts)) || MAX_HEARTS;
+    xp = parseInt(localStorage.getItem(STORAGE.xp)) || 0;
+    streak = parseInt(localStorage.getItem(STORAGE.streak)) || 0;
+    lastDay = localStorage.getItem(STORAGE.lastDay) || null;
+  }catch(e){}
+}
+
+/* ---------- Init ---------- */
+function init(){
+  loadPersist();
+  updateDailyStreak();
+  // build questions by copying bank and shuffling to questions
+  questions = shuffle(QUESTION_BANK.slice(0, QUESTIONS_COUNT));
+  currentIndex = 0;
+  score = 0;
+  wrongList = [];
+  updateHud();
+  showQuestion();
+}
+
+/* ---------- HUD ---------- */
+function updateHud(){
+  progressEl.textContent = `Question ${Math.min(currentIndex+1, questions.length)} of ${questions.length}`;
+  scoreEl.textContent = `Score: ${score}`;
+  heartsEl.textContent = `Hearts: ${hearts}`;
+  xpEl.textContent = `XP: ${xp}`;
+  streakEl.textContent = `Streak: ${streak} days`;
+  sessionSummary.textContent = `Answered: ${currentIndex} / ${questions.length}`;
+}
+
+/* ---------- Streak ---------- */
+function updateDailyStreak(){
+  const today = new Date().toDateString();
+  if(!lastDay){
+    streak = 1;
+  } else {
+    const last = new Date(lastDay).toDateString();
+    const diff = Math.floor((Date.parse(today) - Date.parse(last)) / 86400000);
+    if(diff === 1) {
+      streak = (streak || 0) + 1;
+      if(streak % 3 === 0) hearts = Math.min(MAX_HEARTS, hearts + 1);
+    } else if(diff > 1){
+      streak = 1;
+      hearts = MAX_HEARTS;
+    } // if diff==0 keep streak
+  }
+  lastDay = today;
+  persist();
+}
+
+/* ---------- Render question ---------- */
+function showQuestion(){
+  clearInterval(timerRef);
+  feedbackEl.style.display = 'none';
+  recapBox.style.display = 'none';
+  document.getElementById('final').style.display = 'none';
+  if(currentIndex >= questions.length){
+    finishQuiz();
+    return;
+  }
+
+  const item = questions[currentIndex];
+  // render question text and choices
+  questionWrapper.innerHTML = '';
+  const qText = document.createElement('div');
+  qText.className = 'question-text';
+  qText.textContent = item.q;
+  questionWrapper.appendChild(qText);
+
+  const opts = document.createElement('div');
+  opts.className = 'options';
+  item.choices.forEach((c, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.type = 'button';
+    btn.textContent = c;
+    btn.dataset.index = String(idx);
+    btn.addEventListener('click', () => handleAnswer(idx, btn));
+    opts.appendChild(btn);
+  });
+  questionWrapper.appendChild(opts);
+
+  // update HUD and start timer
+  updateHud();
+  startTimer();
+}
+
+/* ---------- Timer ---------- */
+function startTimer(){
+  timeLeft = TIME_PER_Q;
+  timerEl.textContent = `Time: ${timeLeft}`;
+  timerRef = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = `Time: ${timeLeft}`;
+    if(timeLeft <= 0){
+      clearInterval(timerRef);
+      // time out => treat as incorrect (no choice)
+      markTimeout();
+    }
+  }, 1000);
+}
+
+function markTimeout(){
+  // reveal correct answer, deduct score, lose heart
+  const item = questions[currentIndex];
+  const opts = Array.from(document.querySelectorAll('.opt'));
+  opts.forEach((b, idx) => {
+    b.disabled = true;
+    if(idx === item.answer) b.classList.add('correct');
+  });
+  feedbackEl.style.display = 'block';
+  feedbackEl.className = 'feedback bad';
+  feedbackEl.textContent = `⏱️ Time up! Correct answer: ${item.choices[item.answer]}`;
+  // scoring penalty
+  score = Math.max(0, score - 5);
+  hearts = Math.max(0, hearts - 1);
+  wrongList.push(currentIndex);
+  persist();
+  updateHud();
+
+  // if hearts exhausted -> recap
+  if(hearts <= 0){
+    setTimeout(showRecap, 900);
+  } else {
+    setTimeout(()=>{ currentIndex++; showQuestion(); }, 1100);
+  }
+}
+
+/* ---------- Answer handling ---------- */
+function handleAnswer(selectedIdx, btnEl){
+  clearInterval(timerRef);
+  const item = questions[currentIndex];
+  const correctIdx = item.answer;
+  const opts = Array.from(document.querySelectorAll('.opt'));
+
+  // disable all
+  opts.forEach((b, idx) => {
+    b.disabled = true;
+    if(idx === correctIdx) b.classList.add('correct');
+    if(idx === selectedIdx && idx !== correctIdx) b.classList.add('wrong');
+  });
+
+  // correct?
+  if(selectedIdx === correctIdx){
+    feedbackEl.style.display = 'block';
+    feedbackEl.className = 'feedback ok';
+    feedbackEl.textContent = `✅ Correct — ${item.explanation}`;
+    score += 10;
+    xp += XP_PER_CORRECT;
+  } else {
+    feedbackEl.style.display = 'block';
+    feedbackEl.className = 'feedback bad';
+    feedbackEl.textContent = `❌ Incorrect — ${item.explanation}`;
+    score = Math.max(0, score - 5);
+    hearts = Math.max(0, hearts - 1);
+    wrongList.push(currentIndex);
+  }
+  persist();
+  updateHud();
+
+  if(hearts <= 0){
+    setTimeout(showRecap, 900);
+  } else {
+    setTimeout(()=>{ currentIndex++; showQuestion(); }, 1100);
+  }
+}
+
+/* ---------- Recap flow ---------- */
+function showRecap(){
+  clearInterval(timerRef);
+  // if no recorded wrongList, just reset hearts and continue
+  if(wrongList.length === 0){
+    hearts = MAX_HEARTS;
+    persist();
+    updateHud();
+    currentIndex = Math.min(currentIndex, questions.length-1);
+    showQuestion();
+    return;
+  }
+  // pick a random wrong question index (from wrongList)
+  const pickIdx = wrongList[Math.floor(Math.random() * wrongList.length)];
+  const item = questions[pickIdx];
+
+  // render recap UI
+  recapBox.style.display = 'block';
+  recapQ.textContent = item.q;
+  recapChoices.innerHTML = '';
+  item.choices.forEach((c, idx) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.textContent = c;
+    b.addEventListener('click', () => checkRecapAnswer(idx, pickIdx));
+    recapChoices.appendChild(b);
+  });
+
+  // hide main question area content
+  questionWrapper.innerHTML = '';
+  feedbackEl.style.display = 'none';
+}
+
+function checkRecapAnswer(selectedIdx, wrongIndex){
+  const item = questions[wrongIndex];
+  const correct = item.answer;
+  const buttons = Array.from(recapChoices.querySelectorAll('.opt'));
+  buttons.forEach((b, idx) => { b.disabled = true; if(idx===correct) b.classList.add('correct'); if(idx===selectedIdx && idx!==correct) b.classList.add('wrong'); });
+
+  if(selectedIdx === correct){
+    // restore hearts
+    hearts = Math.min(MAX_HEARTS, hearts + HEARTS_RESTORE_ON_RECAP);
+    // remove the wrongIndex from wrongList (all instances)
+    wrongList = wrongList.filter(i => i !== wrongIndex);
+    feedbackEl.style.display = 'block';
+    feedbackEl.className = 'feedback ok';
+    feedbackEl.textContent = `✅ Correct — restored ${HEARTS_RESTORE_ON_RECAP} hearts.`;
+    persist();
+    updateHud();
+    setTimeout(()=>{ recapBox.style.display='none'; showQuestion(); }, 1200);
+  } else {
+    feedbackEl.style.display = 'block';
+    feedbackEl.className = 'feedback bad';
+    feedbackEl.textContent = `❌ Incorrect recap. You can try another recap or restart the quiz.`;
+    setTimeout(()=> {
+      if(confirm('Failed recap. Restart quiz? (Cancel to try another recap)')){
+        startOver();
       } else {
-        const lastDate = new Date(lastDay);
-        const diffDays = Math.floor((new Date(today) - lastDate) / (1000 * 60 * 60 * 24));
-        if (diffDays === 1) {
-          streak++;
-          if (streak % 3 === 0) hearts = Math.min(hearts + 1, 5);
-        } else if (diffDays > 1) {
-          streak = 1;
-          hearts = 5;
-        }
+        // try a different recap question if possible
+        showRecap();
       }
-      localStorage.setItem(storageKeys.lastDay, today);
-      localStorage.setItem(storageKeys.streak, streak);
-      localStorage.setItem(storageKeys.hearts, hearts);
-      localStorage.setItem(storageKeys.xp, xp);
-      updateStats();
-    }
+    }, 700);
+  }
+}
 
-    function updateStats() {
-      document.getElementById('hearts').textContent = `Hearts: ${hearts}`;
-      document.getElementById('xp').textContent = `XP: ${xp}`;
-      document.getElementById('streak').textContent = `Streak: ${streak} days`;
-    }
+/* ---------- Finish ---------- */
+function finishQuiz(){
+  clearInterval(timerRef);
+  // show final box
+  const total = questions.length;
+  const accuracy = Math.round((score / (total * 10)) * 100) || 0;
+  finalScore.textContent = `Score: ${score}`;
+  finalAcc.textContent = `Accuracy (approx): ${accuracy}%`;
+  document.getElementById('final').style.display = 'block';
+  // hide question area & HUD
+  questionWrapper.innerHTML = '';
+  feedbackEl.style.display = 'none';
+  updateHud();
+}
 
-    function startQuiz(section) {
-      currentSection = section;
-      currentQuiz = quizzes[section];
-      currentIndex = 0;
-      score = 0;
-      hearts = Math.min(hearts, 5); // Reset hearts to max 5 per section
-      xp = parseInt(localStorage.getItem(storageKeys.xp)) || 0; // Load current XP
-      document.getElementById("quiz-box").style.display = "block";
-      document.getElementById("score").innerText = "";
-      document.getElementById("restart").style.display = "none";
-      document.getElementById("recap-quiz").style.display = "none";
-      showQuestion();
-    }
+/* ---------- Helpers ---------- */
+function startOver(){
+  // re-init state and shuffle
+  loadPersist();
+  updateDailyStreak();
+  questions = shuffle(QUESTION_BANK.slice(0, QUESTIONS_COUNT));
+  currentIndex = 0;
+  score = 0;
+  wrongList = [];
+  // restore hearts/xp from persisted if present
+  hearts = parseInt(localStorage.getItem(STORAGE.hearts)) || MAX_HEARTS;
+  xp = parseInt(localStorage.getItem(STORAGE.xp)) || 0;
+  updateHud();
+  showQuestion();
+}
 
-    function showQuestion() {
-      const q = currentQuiz[currentIndex];
-      document.getElementById("question").innerText = q.question;
-      const optionsDiv = document.getElementById("options");
-      optionsDiv.innerHTML = "";
-      q.options.forEach((opt, i) => {
-        const btn = document.createElement("button");
-        btn.innerText = opt;
-        btn.onclick = () => checkAnswer(i, q.explanation);
-        optionsDiv.appendChild(btn);
-      });
-      updateStats();
-      document.getElementById("recap-quiz").style.display = "none";
-    }
+/* ---------- Event hookups ---------- */
+document.getElementById('play-again').addEventListener('click', () => { startOver(); document.getElementById('final').style.display='none'; });
+document.getElementById('next-btn').addEventListener('click', ()=>{ currentIndex++; showQuestion(); });
+document.getElementById('restart-btn').addEventListener('click', ()=>{ startOver(); });
 
-    function checkAnswer(selected, explanation) {
-      const correct = currentQuiz[currentIndex].answer;
-      const buttons = document.querySelectorAll("#options button");
-      buttons.forEach((btn, i) => {
-        btn.classList.add(i === correct ? "correct" : (i === selected ? "incorrect" : ""));
-        btn.disabled = true;
-      });
+/* ---------- Start ---------- */
+init();
 
-      if (selected === correct) {
-        xp += 10;
-        alert(`Correct! ${explanation}`);
-      } else {
-        hearts--;
-        alert(`Incorrect. ${explanation} Hearts remaining: ${hearts}`);
-      }
-
-      if (hearts <= 0) {
-        displayRecapQuiz();
-        return;
-      }
-
-      score += (selected === correct) ? 1 : 0;
-      currentIndex++;
-      localStorage.setItem(storageKeys.xp, xp);
-      localStorage.setItem(storageKeys.hearts, hearts);
-      updateStats();
-
-      setTimeout(() => {
-        if (currentIndex < currentQuiz.length) {
-          showQuestion();
-        } else {
-          document.getElementById("score").innerText = `You scored ${score} out of ${currentQuiz.length}!`;
-          document.getElementById("restart").style.display = "block";
-        }
-      }, 1000);
-    }
-
-    function displayRecapQuiz() {
-      const recapQuiz = document.getElementById("recap-quiz");
-      const currentQuestion = currentQuiz[currentIndex].question;
-      recapQuiz.style.display = "block";
-      recapQuiz.innerHTML = `
-        <p>Out of hearts! Answer this recap to restore 2 hearts.</p>
-        <p>Question: What key rule relates to "${currentQuestion.split('?')[0]}"?</p>
-        <button class="option" onclick="checkRecap('15% minimum tax')">15% minimum tax</button>
-        <button class="option" onclick="checkRecap('GloBE Rules')">GloBE Rules</button>
-        <button class="option" onclick="checkRecap('€750m revenue threshold')">€750m revenue threshold</button>
-      `;
-    }
-
-    function checkRecap(answer) {
-      const recapQuiz = document.getElementById("recap-quiz");
-      const feedback = document.createElement("div");
-      feedback.id = "feedback";
-      const correctKey = currentQuiz[currentIndex].explanation.match(/15%|GloBE|€750m/)[0];
-      const isCorrect = answer.includes(correctKey) || correctKey.includes(answer);
-
-      feedback.className = isCorrect ? "correct" : "incorrect";
-      feedback.textContent = isCorrect ? "Correct! Restoring 2 hearts." : "Incorrect. Try again or exit.";
-      recapQuiz.appendChild(feedback);
-
-      if (isCorrect) {
-        hearts = Math.min(hearts + 2, 5);
-        updateStats();
-        setTimeout(() => {
-          recapQuiz.style.display = "none";
-          feedback.remove();
-          showQuestion(); // Retry the current question
-        }, 1200);
-      } else {
-        setTimeout(() => {
-          if (confirm("Failed recap. Exit lesson?")) {
-            startQuiz(currentSection); // Reset to start of section
-          } else {
-            feedback.remove();
-          }
-        }, 1200);
-      }
-    }
-
-    // Initialize
-    loadProgress();
-  </script>
+</script>
 </body>
 </html>
+
