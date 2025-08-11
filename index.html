@@ -1,452 +1,332 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pillar Two Challenge</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f9f9f9;
+      background: #f4f6f8;
       margin: 0;
-      padding: 0;
-    }
-    .container {
-      max-width: 800px;
-      margin: auto;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
+      padding: 2rem;
       color: #333;
     }
-    select, button {
-      font-size: 1em;
-      padding: 10px;
-      margin: 10px 0;
-      width: 100%;
-      border-radius: 5px;
-      border: 1px solid #ccc;
+    h1, h2 {
+      text-align: center;
     }
-    .quiz-box {
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    .quiz-selector {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
     }
-    .question {
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-    .difficulty {
-      float: right;
-      font-size: 0.8em;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: #ccc;
-    }
-    .easy { background: #b2fab4; }
-    .medium { background: #ffe082; }
-    .hard { background: #ff8a80; }
-    .options button {
-      display: block;
-      margin: 8px 0;
-      padding: 10px;
-      width: 100%;
+    button {
+      padding: 0.6rem 1.2rem;
+      font-size: 1rem;
       border: none;
       border-radius: 5px;
-      background: #e0e0e0;
+      background-color: #0078d4;
+      color: white;
       cursor: pointer;
-      transition: background 0.3s;
     }
-    .options button:hover {
-      background: #d0d0d0;
+    button:hover {
+      background-color: #005ea2;
     }
-    .feedback {
-      margin-top: 10px;
-      font-style: italic;
+    .question-box {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    .learn-more {
-      margin-top: 5px;
-      font-size: 0.9em;
+    .options {
+      margin-top: 1rem;
     }
-    .progress-bar {
-      height: 10px;
-      background: #ddd;
-      border-radius: 5px;
-      overflow: hidden;
-      margin-bottom: 20px;
+    .options button {
+      display: block;
+      width: 100%;
+      margin: 0.5rem 0;
+      background-color: #e1ecf4;
+      color: #333;
     }
-    .progress-fill {
-      height: 100%;
-      width: 0%;
-      background: #4caf50;
-      transition: width 0.5s;
+    .options button.correct {
+      background-color: #c6f6d5;
     }
-    .score-box {
+    .options button.incorrect {
+      background-color: #feb2b2;
+    }
+    .stats {
       text-align: center;
-      margin-top: 20px;
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+    }
+    .score {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 1.2rem;
+    }
+    #recap-quiz {
+      display: none;
+      margin-top: 1rem;
+    }
+    #restart {
+      display: none;
+      margin-top: 1rem;
+    }
+    @media (max-width: 600px) {
+      .quiz-selector {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Pillar Two Challenge</h1>
-    <div class="quiz-box">
-      <label for="sectionSelect">Choose a section:</label>
-      <select id="sectionSelect">
-        <option value="qdmt">QDMTT</option>
-        <option value="iir">IIR</option>
-        <option value="utpr">UTPR</option>
-        <option value="general">General Concepts</option>
-        <option value="auslaw">Australia-Specific Law</option>
-      </select>
-      <button onclick="startQuiz()">Start Quiz</button>
-      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-      <div id="quiz"></div>
-      <div class="score-box" id="score"></div>
+  <h1>Pillar Two Challenge</h1>
+  <h2>Select a Section</h2>
+  <div class="quiz-selector">
+    <button onclick="startQuiz('qdmt')">QDMTT</button>
+    <button onclick="startQuiz('iir')">IIR</button>
+    <button onclick="startQuiz('sttr')">STTR</button>
+  </div>
+  <div class="question-box" id="quiz-box" style="display:none;" aria-live="polite" role="region">
+    <div class="stats" id="stats">
+      <span id="hearts">Hearts: 5</span> | <span id="xp">XP: 0</span> | <span id="streak">Streak: 0 days</span>
     </div>
+    <div id="question"></div>
+    <div class="options" id="options"></div>
+    <div class="score" id="score"></div>
+    <div id="recap-quiz"></div>
+    <button id="restart" onclick="startQuiz(currentSection)">Restart Section</button>
   </div>
 
   <script>
     const quizzes = {
-  qdmt: [
-    {
-      text: "What is the minimum effective tax rate required under Australia’s QDMTT?",
-      options: ["15%", "10%", "20%"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.legislation.gov.au/Details/C2024A00123"
-    },
-    {
-      text: "Which entities are subject to QDMTT in Australia?",
-      options: ["All Australian entities", "Entities in MNE groups with global revenue ≥ €750M", "Only foreign-owned entities"],
-      answer: 1,
-      difficulty: "medium",
-      learnMore: "https://www.ato.gov.au/Business/International-tax/Global-minimum-tax/"
-    },
-    {
-      text: "How is the QDMTT top-up tax calculated?",
-      options: ["Based on accounting profit", "Based on excess profit over 15% ETR", "Flat rate on taxable income"],
-      answer: 1,
-      difficulty: "hard",
-      learnMore: "https://www.oecd.org/tax/beps/global-anti-base-erosion-rules.htm"
-    },
-    {
-      text: "Which income years does QDMTT apply to in Australia?",
-      options: ["Starting on or after 1 Jan 2024", "Starting on or after 1 July 2024", "Starting on or after 1 Jan 2025"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.legislation.gov.au/Details/C2024A00123"
-    },
-    {
-      text: "What is the role of the GloBE Information Return in QDMTT compliance?",
-      options: ["It replaces tax returns", "It reports jurisdictional ETR and top-up tax", "It determines eligibility for QDMTT"],
-      answer: 1,
-      difficulty: "medium",
-      learnMore: "https://www.oecd.org/tax/beps/globe-information-return.htm"
-    },
-    {
-      text: "Which rule takes priority: QDMTT or IIR?",
-      options: ["QDMTT", "IIR", "UTPR"],
-      answer: 0,
-      difficulty: "hard",
-      learnMore: "https://www.legislation.gov.au/Details/C2024A00123"
-    },
-    {
-      text: "Does Australia’s QDMTT apply to passive income?",
-      options: ["Yes, if included in covered taxes", "No, passive income is excluded", "Only if derived from foreign sources"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.ato.gov.au"
-    },
-    {
-      text: "What is the purpose of QDMTT?",
-      options: ["To reduce corporate tax rates", "To ensure minimum taxation in Australia before foreign rules apply", "To simplify tax compliance"],
-      answer: 1,
-      difficulty: "easy",
-      learnMore: "https://www.oecd.org/tax/beps/"
-    },
-    {
-      text: "Which accounting standard is used to determine covered taxes under QDMTT?",
-      options: ["IFRS", "Australian GAAP", "OECD-defined GloBE standard"],
-      answer: 2,
-      difficulty: "hard",
-      learnMore: "https://www.oecd.org/tax/beps/globe-model-rules.htm"
-    },
-    {
-      text: "Can QDMTT result in no top-up tax if the jurisdictional ETR is ≥ 15%?",
-      options: ["Yes", "No", "Only if approved by the ATO"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.legislation.gov.au/Details/C2024A00123"
-    }
-  ],
-    iir: [
-    {
-      text: "What does IIR stand for in the Pillar Two framework?",
-      options: ["Income Inclusion Rule", "International Income Regulation", "Indirect Income Reporting"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.oecd.org/tax/beps/income-inclusion-rule.htm"
-    },
-    {
-      text: "Which entity applies the IIR?",
-      options: ["Ultimate parent entity", "Local subsidiary", "Tax authority"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.legislation.gov.au"
-    },
-    {
-      text: "What triggers the IIR?",
-      options: ["Low ETR in a foreign jurisdiction", "High revenue in Australia", "Losses in the parent entity"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.oecd.org/tax/beps/"
-    },
-    {
-      text: "Does Australia’s IIR apply to foreign subsidiaries?",
-      options: ["Yes", "No", "Only if they are profitable"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.ato.gov.au"
-    },
-    {
-      text: "What is the top-up tax rate under IIR?",
-      options: ["15%", "10%", "20%"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.legislation.gov.au"
-    },
-    {
-      text: "How is the IIR top-up tax calculated?",
-      options: ["Based on excess profit over 15% ETR", "Flat rate on gross income", "Based on local tax paid"],
-      answer: 0,
-      difficulty: "hard",
-      learnMore: "https://www.oecd.org/tax/beps/"
-    },
-    {
-      text: "Which rule applies first: IIR or UTPR?",
-      options: ["IIR", "UTPR", "QDMTT"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.legislation.gov.au"
-    },
-    {
-      text: "Can IIR apply to passive income?",
-      options: ["Yes", "No", "Only if derived from royalties"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.oecd.org"
-    },
-    {
-      text: "What is the role of the GloBE rules in IIR?",
-      options: ["Define scope and calculation", "Replace local tax law", "Determine residency"],
-      answer: 0,
-      difficulty: "hard",
-      learnMore: "https://www.oecd.org/tax/beps/globe-model-rules.htm"
-    },
-    {
-      text: "Is the IIR part of Australia’s 2024 enacted law?",
-      options: ["Yes", "No", "Only in draft form"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.legislation.gov.au"
-    }
-  ],
-  utpr: [
-    {
-      text: "What does UTPR stand for?",
-      options: ["Undertaxed Profits Rule", "Universal Tax Payment Regulation", "Unreported Taxable Profits Rule"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.oecd.org/tax/beps/undertaxed-profits-rule.htm"
-    },
-    {
-      text: "When does Australia’s UTPR take effect?",
-      options: ["1 Jan 2025", "1 Jan 2024", "1 July 2025"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.legislation.gov.au"
-    },
-    {
-      text: "What is the purpose of UTPR?",
-      options: ["To allocate top-up tax when IIR doesn’t apply", "To reduce tax rates", "To simplify reporting"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.oecd.org"
-    },
-    {
-      text: "Which entities are affected by UTPR?",
-      options: ["Constituent entities in jurisdictions with low ETR", "Only parent entities", "Only Australian entities"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.ato.gov.au"
-    },
-    {
-      text: "How is the UTPR top-up tax allocated?",
-      options: ["Based on employees and tangible assets", "Equally across jurisdictions", "Based on revenue"],
-      answer: 0,
-      difficulty: "hard",
-      learnMore: "https://www.oecd.org"
-    },
-    {
-      text: "Can UTPR apply if IIR has already been applied?",
-      options: ["No", "Yes", "Only if approved by the ATO"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.legislation.gov.au"
-    },
-    {
-      text: "Is UTPR part of Australia’s 2024 legislation?",
-      options: ["Yes", "No", "Only in draft form"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.legislation.gov.au"
-    },
-    {
-      text: "What is the minimum ETR threshold triggering UTPR?",
-      options: ["15%", "10%", "20%"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.oecd.org"
-    },
-    {
-      text: "Does UTPR override QDMTT?",
-      options: ["No, QDMTT applies first", "Yes", "Only in foreign jurisdictions"],
-      answer: 0,
-      difficulty: "hard",
-      learnMore: "https://www.legislation.gov.au"
-    },
-    {
-      text: "What is the role of the GloBE rules in UTPR?",
-      options: ["Define allocation and scope", "Determine residency", "Set tax rates"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.oecd.org/tax/beps/globe-model-rules.htm"
-    }
-  ],
-  general: [
-    {
-      text: "What is the global revenue threshold for Pillar Two?",
-      options: ["€750M", "AUD 1B", "USD 500M"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.oecd.org/tax/beps/"
-    },
-    {
-      text: "What is the minimum effective tax rate under Pillar Two?",
-      options: ["10%", "12.5%", "15%", "20%"],
-      answer: 2,
-      difficulty: "easy",
-      learnMore: "https://www.oecd.org/tax/beps/"
-    },
-    {
-      text: "Which entities are primarily affected by Pillar Two?",
-      options: ["Startups", "SMEs", "MNEs with revenue over €750M", "Non-profits"],
-      answer: 2,
-      difficulty: "medium",
-      learnMore: "https://www.oecd.org/tax/beps/"
-    },
-    {
-      text: "What is the purpose of Pillar Two?",
-      options: ["To ensure a minimum level of taxation globally", "To eliminate corporate tax", "To promote trade"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.oecd.org/tax/beps/"
-    },
-    {
-      text: "Which organization developed the Pillar Two framework?",
-      options: ["UN", "OECD", "IMF"],
-      answer: 1,
-      difficulty: "easy",
-      learnMore: "https://www.oecd.org/tax/beps/"
-    },
-    {
-      text: "What are the core rules under Pillar Two?",
-      options: ["QDMTT, IIR, UTPR", "VAT, GST, PAYG", "BEPS, FATCA, CRS"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.oecd.org/tax/beps/"
-    },
-    {
-      text: "Does Pillar Two apply to domestic-only companies?",
-      options: ["No", "Yes", "Only if revenue exceeds €750M"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.oecd.org/tax/beps/"
-    },
-    {
-      text: "Is Pillar Two part of the OECD/G20 Inclusive Framework?",
-      options: ["Yes", "No", "Only for EU countries"],
-      answer: 0,
-      difficulty: "easy",
-      learnMore: "https://www.oecd.org/tax/beps/"
-    },
-    {
-      text: "What is the role of the GloBE rules?",
-      options: ["To calculate top-up tax", "To set VAT rates", "To define residency"],
-      answer: 0,
-      difficulty: "medium",
-      learnMore: "https://www.oecd.org/tax/beps/globe-model-rules.htm"
-    },
-    {
-      text: "Can countries implement Pillar Two differently?",
-      options: ["Yes, within OECD guidelines", "No, it must be identical", "Only with UN approval"],
-      answer: 
-;
+      qdmt: [
+        { question: "What does QDMTT stand for?", options: ["Qualified Domestic Minimum Top-up Tax", "Quick Domestic Margin Tax", "Quarterly Deferred Minimum Tax", "Qualified Deferred Margin Transfer"], answer: 0, explanation: "QDMTT stands for Qualified Domestic Minimum Top-up Tax, ensuring local profits are taxed at 15% as per Section 15 of the Taxation (Multinational—Global and Domestic Minimum Tax) Act 2024." },
+        { question: "Which jurisdiction applies QDMTT?", options: ["Ultimate parent", "Intermediate parent", "Local jurisdiction", "Foreign affiliate"], answer: 2, explanation: "QDMTT is applied by the local jurisdiction to enforce the minimum tax rate, per Section 15." },
+        { question: "QDMTT is designed to ensure what?", options: ["Local profits are taxed at the minimum rate", "Foreign income is exempt", "Parent entities pay more tax", "Losses are carried forward"], answer: 0, explanation: "It ensures local profits meet the 15% minimum rate, as outlined in Section 15." },
+        { question: "What is the minimum effective tax rate under Pillar Two?", options: ["10%", "15%", "20%", "25%"], answer: 1, explanation: "The minimum effective tax rate is 15%, as enacted in Section 10." },
+        { question: "QDMTT applies before which other rule?", options: ["STTR", "IIR", "GILTI", "CFC"], answer: 1, explanation: "QDMTT applies before IIR, per the priority rules in Section 15." },
+        { question: "Does QDMTT apply to Australian entities in a multinational group with revenue ≥ €750M?", options: ["Yes", "No", "Only if foreign-owned", "Only if listed"], answer: 0, explanation: "Yes, QDMTT applies to such entities, per Section 5 eligibility criteria." },
+        { question: "What is the purpose of QDMTT?", options: ["To collect top-up tax locally before foreign jurisdictions apply IIR or UTPR", "To exempt domestic entities", "To reduce compliance burden", "To replace corporate income tax"], answer: 0, explanation: "It collects top-up tax locally first, as per Section 15." },
+        { question: "Which rule takes priority: QDMTT or IIR?", options: ["QDMTT", "IIR", "UTPR", "None"], answer: 0, explanation: "QDMTT takes priority, per Section 15 priority rules." },
+        { question: "Is Australia’s QDMTT a qualified regime under OECD standards?", options: ["Yes", "No", "Pending review", "Only for domestic groups"], answer: 0, explanation: "Yes, it meets OECD standards, per Section 15 compliance." },
+        { question: "What is the role of the GloBE Information Return in QDMTT compliance?", options: ["It replaces tax returns", "It reports jurisdictional ETR and top-up tax", "It determines eligibility for QDMTT", "It calculates payroll tax"], answer: 1, explanation: "It reports ETR and top-up tax, per Section 30." },
+        { question: "Can QDMTT result in no top-up tax if the jurisdictional ETR is ≥ 15%?", options: ["Yes", "No", "Only if approved by the ATO", "Only for listed entities"], answer: 0, explanation: "Yes, if ETR meets or exceeds 15%, per Section 15." },
+        { question: "Which accounting standard is used to determine covered taxes under QDMTT?", options: ["IFRS", "Australian GAAP", "OECD-defined GloBE standard", "US GAAP"], answer: 2, explanation: "The OECD-defined GloBE standard is used, per Section 15." },
+        { question: "Does QDMTT apply to passive income?", options: ["Yes, if included in covered taxes", "No, passive income is excluded", "Only if derived from foreign sources", "Only if taxed at source"], answer: 0, explanation: "Yes, if included, per Section 15." },
+        { question: "What is the minimum ETR threshold triggering QDMTT?", options: ["10%", "12.5%", "15%", "20%"], answer: 2, explanation: "The threshold is 15%, per Section 15." },
+        { question: "Which rule applies first in Australia’s Pillar Two framework?", options: ["QDMTT", "IIR", "UTPR", "STTR"], answer: 0, explanation: "QDMTT applies first, per Section 15 priority." },
+        { question: "Does QDMTT apply to Australian branches of foreign entities?", options: ["Yes", "No", "Only if profitable", "Only if tax-exempt"], answer: 0, explanation: "Yes, per Section 5 eligibility." },
+        { question: "Is QDMTT calculated on a jurisdictional basis?", options: ["Yes", "No", "Only for listed entities", "Only for trusts"], answer: 0, explanation: "Yes, per Section 15." },
+        { question: "Can QDMTT be reduced by foreign tax credits?", options: ["No", "Yes", "Only if approved by the ATO", "Only for US entities"], answer: 0, explanation: "No, per Section 15 rules." },
+        { question: "Does QDMTT apply to consolidated financial statements?", options: ["Yes", "No", "Only if audited", "Only if IFRS-compliant"], answer: 0, explanation: "Yes, per Section 15." },
+        { question: "Is QDMTT part of Australia’s 2024 enacted legislation?", options: ["Yes", "No", "Only in draft", "Only for 2025 onwards"], answer: 0, explanation: "Yes, enacted in 2024, per Section 1." }
+      ],
+      iir: [
+        { question: "What does IIR stand for?", options: ["International Income Reporting", "Income Inclusion Rule", "Indirect Income Regulation", "Inclusive Income Rate"], answer: 1, explanation: "IIR stands for Income Inclusion Rule, targeting low-taxed foreign income, per Section 18." },
+        { question: "Which entity applies the IIR?", options: ["Ultimate parent", "Local branch", "Foreign affiliate", "Tax authority"], answer: 0, explanation: "The ultimate parent entity applies IIR, as per Section 18." },
+        { question: "IIR targets low-taxed income of which entities?", options: ["Domestic subsidiaries", "Foreign subsidiaries", "Individuals", "Trusts"], answer: 1, explanation: "IIR focuses on foreign subsidiaries, per Section 18." },
+        { question: "IIR is applied after which rule?", options: ["QDMTT", "STTR", "CFC", "GILTI"], answer: 0, explanation: "IIR applies after QDMTT, per Section 18 priority rules." },
+        { question: "What is the primary goal of IIR?", options: ["To simplify tax reporting", "To ensure minimum taxation of foreign income", "To eliminate double taxation", "To promote transparency"], answer: 1, explanation: "The goal is to ensure minimum taxation of foreign income, per Section 18." },
+        { question: "What is the minimum ETR threshold for IIR to apply?", options: ["10%", "12.5%", "15%", "20%"], answer: 2, explanation: "The threshold is 15%, per Section 18." },
+        { question: "Does IIR apply to income earned by foreign subsidiaries?", options: ["Yes", "No", "Only if repatriated", "Only if tax-exempt"], answer: 0, explanation: "Yes, per Section 18." },
+        { question: "Which entity pays top-up tax under IIR?", options: ["Australian parent", "Foreign subsidiary", "ATO", "Ultimate parent"], answer: 0, explanation: "The Australian parent pays, per Section 18." },
+        { question: "Is IIR calculated using GloBE rules?", options: ["Yes", "No", "Only for listed entities", "Only for trusts"], answer: 0, explanation: "Yes, per Section 18." },
+        { question: "Does Australia’s IIR apply to passive income?", options: ["Yes", "No", "Only if derived from royalties", "Only if taxed at source"], answer: 0, explanation: "Yes, per Section 18." },
+        { question: "Can IIR apply if QDMTT has already been applied?", options: ["No", "Yes", "Only if approved by ATO", "Only for foreign-owned entities"], answer: 0, explanation: "No, per Section 18 priority rules." },
+        { question: "Is IIR part of Australia’s 2024 legislation?", options: ["Yes", "No", "Only in draft", "Only for 2025 onwards"], answer: 0, explanation: "Yes, enacted in 2024, per Section 1." },
+        { question: "Does IIR apply to Australian entities with foreign subsidiaries?", options: ["Yes", "No", "Only if consolidated", "Only if listed"], answer: 0, explanation: "Yes, per Section 18." },
+        { question: "What is the role of the GloBE Information Return in IIR?", options: ["It reports ETR and top-up tax", "It replaces tax returns", "It determines residency", "It calculates payroll tax"], answer: 0, explanation: "It reports ETR and top-up tax, per Section 30." },
+        { question: "Can IIR result in no top-up tax if ETR ≥ 15%?", options: ["Yes", "No", "Only if approved by ATO", "Only for listed entities"], answer: 0, explanation: "Yes, if ETR meets or exceeds 15%, per Section 18." },
+        { question: "Does IIR apply to income taxed under a qualified domestic regime?", options: ["No", "Yes", "Only if below threshold", "Only if passive"], answer: 0, explanation: "No, per Section 18." },
+        { question: "Is IIR applied on a jurisdictional basis?", options: ["Yes", "No", "Only for trusts", "Only for listed entities"], answer: 0, explanation: "Yes, per Section 18." },
+        { question: "Can IIR be reduced by foreign tax credits?", options: ["No", "Yes", "Only if approved by ATO", "Only for US entities"], answer: 0, explanation: "No, per Section 18 rules." },
+        { question: "Does IIR apply to consolidated financial statements?", options: ["Yes", "No", "Only if audited", "Only if IFRS-compliant"], answer: 0, explanation: "Yes, per Section 18." },
+        { question: "Is IIR triggered by low-taxed foreign income?", options: ["Yes", "No", "Only if repatriated", "Only if exempt"], answer: 0, explanation: "Yes, per Section 18." }
+      ],
+      sttr: [
+        { question: "What does STTR stand for?", options: ["Standard Transfer Tax Rule", "Subject to Tax Rule", "Statutory Tax Transparency Regulation", "Simplified Tax Treaty Rule"], answer: 1, explanation: "STTR stands for Subject to Tax Rule, targeting low-taxed related party payments, per Section 25." },
+        { question: "STTR applies to which type of payments?", options: ["Interest, royalties, and service fees", "Dividends and capital gains", "Inventory transfers", "Payroll"], answer: 0, explanation: "It applies to interest, royalties, and service fees, per Section 25." },
+        { question: "Which jurisdiction applies STTR?", options: ["Payer jurisdiction", "Payee jurisdiction", "Parent jurisdiction", "Tax haven jurisdiction"], answer: 0, explanation: "The payer jurisdiction applies STTR, per Section 25." },
+        { question: "What is the minimum tax rate threshold under STTR?", options: ["5%", "9%", "15%", "20%"], answer: 1, explanation: "The threshold is 9%, per Section 25." },
+        { question: "Does STTR override QDMTT?", options: ["No", "Yes", "Only if approved by ATO", "Only for foreign-owned entities"], answer: 0, explanation: "No, per Section 25 priority rules." },
+        { question: "Is STTR part of Australia’s 2024 legislation?", options: ["Yes", "No", "Only in draft", "Only for 2025 onwards"], answer: 0, explanation: "Yes, enacted in 2024, per Section 1." },
+        { question: "STTR applies to payments made to which entities?", options: ["Related parties in low-tax jurisdictions", "Unrelated parties", "Domestic subsidiaries", "Trusts"], answer: 0, explanation: "Related parties in low-tax jurisdictions, per Section 25." },
+        { question: "Can STTR apply if IIR has already been applied?", options: ["No", "Yes", "Only if approved by ATO", "Only for listed entities"], answer: 0, explanation: "No, per Section 25 priority rules." },
+        { question: "Is STTR calculated on a payment-by-payment basis?", options: ["Yes", "No", "Only if consolidated", "Only if audited"], answer: 0, explanation: "Yes, per Section 25." },
+        { question: "Does STTR apply to service payments?", options: ["Yes", "No", "Only if passive", "Only if capitalized"], answer: 0, explanation: "Yes, per Section 25." },
+        { question: "Can STTR result in additional tax collection?", options: ["Yes", "No", "Only if approved by ATO", "Only for listed entities"], answer: 0, explanation: "Yes, per Section 25." },
+        { question: "Is STTR triggered by payments taxed below 9%?", options: ["Yes", "No", "Only if passive", "Only if exempt"], answer: 0, explanation: "Yes, per Section 25." },
+        { question: "Does STTR apply to payments made from Australia?", options: ["Yes", "No", "Only if foreign-owned", "Only if listed"], answer: 0, explanation: "Yes, per Section 25." },
+        { question: "Is STTR part of the OECD’s Pillar Two framework?", options: ["Yes", "No", "Only in draft", "Only for EU"], answer: 0, explanation: "Yes, per Section 25." },
+        { question: "Does STTR apply to payments taxed under a qualified regime?", options: ["No", "Yes", "Only if below threshold", "Only if passive"], answer: 0, explanation: "No, per Section 25." }
+      ]
+    };
 
-    let current = 0, score = 0, currentQuiz = [];
+    let currentQuiz = [];
+    let currentIndex = 0;
+    let score = 0;
+    let hearts = 5;
+    let xp = 0;
+    let streak = 0;
+    let currentSection = '';
 
-    function startQuiz() {
-      const section = document.getElementById("sectionSelect").value;
+    // Local Storage Keys
+    const storageKeys = {
+      hearts: 'pillar2_hearts',
+      xp: 'pillar2_xp',
+      streak: 'pillar2_streak',
+      lastDay: 'pillar2_lastDay'
+    };
+
+    function loadProgress() {
+      hearts = parseInt(localStorage.getItem(storageKeys.hearts)) || 5;
+      xp = parseInt(localStorage.getItem(storageKeys.xp)) || 0;
+      streak = parseInt(localStorage.getItem(storageKeys.streak)) || 0;
+      const lastDay = localStorage.getItem(storageKeys.lastDay);
+      const today = new Date().toDateString();
+
+      if (!lastDay) {
+        streak = 1;
+      } else {
+        const lastDate = new Date(lastDay);
+        const diffDays = Math.floor((new Date(today) - lastDate) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          streak++;
+          if (streak % 3 === 0) hearts = Math.min(hearts + 1, 5);
+        } else if (diffDays > 1) {
+          streak = 1;
+          hearts = 5;
+        }
+      }
+      localStorage.setItem(storageKeys.lastDay, today);
+      localStorage.setItem(storageKeys.streak, streak);
+      localStorage.setItem(storageKeys.hearts, hearts);
+      localStorage.setItem(storageKeys.xp, xp);
+      updateStats();
+    }
+
+    function updateStats() {
+      document.getElementById('hearts').textContent = `Hearts: ${hearts}`;
+      document.getElementById('xp').textContent = `XP: ${xp}`;
+      document.getElementById('streak').textContent = `Streak: ${streak} days`;
+    }
+
+    function startQuiz(section) {
+      currentSection = section;
       currentQuiz = quizzes[section];
-      current = 0;
+      currentIndex = 0;
       score = 0;
-      document.getElementById("score").innerHTML = "";
-      loadQuestion();
+      hearts = Math.min(hearts, 5); // Reset hearts to max 5 per section
+      xp = parseInt(localStorage.getItem(storageKeys.xp)) || 0; // Load current XP
+      document.getElementById("quiz-box").style.display = "block";
+      document.getElementById("score").innerText = "";
+      document.getElementById("restart").style.display = "none";
+      document.getElementById("recap-quiz").style.display = "none";
+      showQuestion();
     }
 
-    function loadQuestion() {
-      const q = currentQuiz[current];
-      const quizDiv = document.getElementById("quiz");
-      const progress = ((current / currentQuiz.length) * 100).toFixed(0);
-      document.getElementById("progressFill").style.width = `${progress}%`;
+    function showQuestion() {
+      const q = currentQuiz[currentIndex];
+      document.getElementById("question").innerText = q.question;
+      const optionsDiv = document.getElementById("options");
+      optionsDiv.innerHTML = "";
+      q.options.forEach((opt, i) => {
+        const btn = document.createElement("button");
+        btn.innerText = opt;
+        btn.onclick = () => checkAnswer(i, q.explanation);
+        optionsDiv.appendChild(btn);
+      });
+      updateStats();
+      document.getElementById("recap-quiz").style.display = "none";
+    }
 
-      quizDiv.innerHTML = `
-        <div class="question">${q.text} <span class="difficulty ${q.difficulty}">${q.difficulty.toUpperCase()}</span></div>
-        <div class="options">
-          ${q.options.map((opt, i) => `<button onclick="checkAnswer(${i})">${opt}</button>`).join("")}
-        </div>
-        <div class="learn-more"><a href="${q.learnMore}" target="_blank">Learn More</a></div>
-        <div class="feedback" id="feedback"></div>
+    function checkAnswer(selected, explanation) {
+      const correct = currentQuiz[currentIndex].answer;
+      const buttons = document.querySelectorAll("#options button");
+      buttons.forEach((btn, i) => {
+        btn.classList.add(i === correct ? "correct" : (i === selected ? "incorrect" : ""));
+        btn.disabled = true;
+      });
+
+      if (selected === correct) {
+        xp += 10;
+        alert(`Correct! ${explanation}`);
+      } else {
+        hearts--;
+        alert(`Incorrect. ${explanation} Hearts remaining: ${hearts}`);
+      }
+
+      if (hearts <= 0) {
+        displayRecapQuiz();
+        return;
+      }
+
+      score += (selected === correct) ? 1 : 0;
+      currentIndex++;
+      localStorage.setItem(storageKeys.xp, xp);
+      localStorage.setItem(storageKeys.hearts, hearts);
+      updateStats();
+
+      setTimeout(() => {
+        if (currentIndex < currentQuiz.length) {
+          showQuestion();
+        } else {
+          document.getElementById("score").innerText = `You scored ${score} out of ${currentQuiz.length}!`;
+          document.getElementById("restart").style.display = "block";
+        }
+      }, 1000);
+    }
+
+    function displayRecapQuiz() {
+      const recapQuiz = document.getElementById("recap-quiz");
+      const currentQuestion = currentQuiz[currentIndex].question;
+      recapQuiz.style.display = "block";
+      recapQuiz.innerHTML = `
+        <p>Out of hearts! Answer this recap to restore 2 hearts.</p>
+        <p>Question: What key rule relates to "${currentQuestion.split('?')[0]}"?</p>
+        <button class="option" onclick="checkRecap('15% minimum tax')">15% minimum tax</button>
+        <button class="option" onclick="checkRecap('GloBE Rules')">GloBE Rules</button>
+        <button class="option" onclick="checkRecap('€750m revenue threshold')">€750m revenue threshold</button>
       `;
     }
 
-    function checkAnswer(selected) {
-      const q = currentQuiz[current];
-      const feedback = document.getElementById("feedback");
-      if (selected === q.answer) {
-        score++;
-        feedback.textContent = "✅ Correct!";
+    function checkRecap(answer) {
+      const recapQuiz = document.getElementById("recap-quiz");
+      const feedback = document.createElement("div");
+      feedback.id = "feedback";
+      const correctKey = currentQuiz[currentIndex].explanation.match(/15%|GloBE|€750m/)[0];
+      const isCorrect = answer.includes(correctKey) || correctKey.includes(answer);
+
+      feedback.className = isCorrect ? "correct" : "incorrect";
+      feedback.textContent = isCorrect ? "Correct! Restoring 2 hearts." : "Incorrect. Try again or exit.";
+      recapQuiz.appendChild(feedback);
+
+      if (isCorrect) {
+        hearts = Math.min(hearts + 2, 5);
+        updateStats();
+        setTimeout(() => {
+          recapQuiz.style.display = "none";
+          feedback.remove();
+          showQuestion(); // Retry the current question
+        }, 1200);
       } else {
-        feedback.textContent = `❌ Incorrect. Correct answer: ${q.options[q.answer]}`;
+        setTimeout(() => {
+          if (confirm("Failed recap. Exit lesson?")) {
+            startQuiz(currentSection); // Reset to start of section
+          } else {
+            feedback.remove();
+          }
+        }, 1200);
       }
-      current++;
-      setTimeout(() => {
-        if (current < currentQuiz.length) {
-          loadQuestion();
-        } else {
-          document.getElementById("quiz").innerHTML = "";
-          document.getElementById("progressFill").style.width = "100%";
-          document.getElementById("score").innerHTML = `
-            <h3>Quiz Complete!</h3>
-            <p>Your score: ${score} / ${currentQuiz.length}</p>
-            <button onclick="startQuiz()">Restart Quiz</button>
-          `;
-        }
-      }, 1500);
     }
+
+    // Initialize
+    loadProgress();
   </script>
 </body>
 </html>
