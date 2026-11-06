@@ -18,7 +18,7 @@ A volunteer roster that runs inside one Google Sheet. Coordinators build an even
 
 ## One-time setup (about 15 minutes)
 
-New to this? Follow the illustrated step-by-step guide: **[PC Volunteer Roster - Setup Guide.pdf](PC%20Volunteer%20Roster%20-%20Setup%20Guide.pdf)**. Its source is in `guide/`.
+New to this? Ask the Secretary for the illustrated setup guide (PDF, kept in the P&C Google Drive).
 
 
 1. Create a new Google Sheet in the P&C's Google account, e.g. *P&C Volunteer Roster*.
