@@ -40,6 +40,25 @@ const HEADERS = {
   [SH.SETTINGS]: ['Setting', 'Value', 'Help'],
 };
 
+// Wembley PS P&C Brand Identity Guide v1.1 (Oct 2026). The guide wins if these ever differ.
+const BRAND = {
+  deepNavy: '#1E3D7A',   // headers, footers
+  navy: '#2E5AAC',       // primary, headings, links, buttons
+  cyan: '#3CADD4',       // accents and rules only (never white text on cyan)
+  lightCyan: '#7FCDE6',  // small labels/links on navy
+  nearBlack: '#1A2744',  // body text
+  midGrey: '#5A6A8A',    // secondary text
+  paleBlue: '#DDE6F5',   // borders, dividers
+  offWhite: '#F7F9FC',   // page background
+  panelTint: '#F1F6FC',  // cards and panels on white
+  cyanTint: '#EAF6FB',   // action callouts
+  headingFont: 'Nunito',
+  bodyFont: 'Lato',
+  // Email clients can't always load web fonts; these fallbacks avoid Arial/Roboto where the device allows.
+  headingStack: "'Nunito', 'Nunito Sans', 'Lato', 'Helvetica Neue', Helvetica, sans-serif",
+  bodyStack: "'Lato', 'Helvetica Neue', Helvetica, sans-serif",
+};
+
 const EVENT_STATUSES = ['Draft', 'Open', 'Closed', 'Done'];
 const SIGNUP_STATUSES = ['Confirmed', 'Pending WWC', 'Waitlist', 'Cancelled'];
 const ACTIVE = ['Confirmed', 'Pending WWC']; // statuses that hold a spot
@@ -58,8 +77,14 @@ const Q = {
 const STANDARD_TITLES = Object.keys(Q).map(k => Q[k]);
 
 const DEFAULT_SETTINGS = [
-  ['P&C name', 'Wembley Primary School P&C', 'Used in emails and form headings.'],
+  ['P&C name', 'Wembley PS P&C', 'Used in emails and form headings.'],
   ['Sender name', '', 'Signs off emails, e.g. "Jo Smith, Volunteer Coordinator". Blank = "The P&C team".'],
+  ['Public email', 'hello@wembleypc.org.au', 'Shown in the email and form footer, and used as the reply-to address when an event has no coordinator email.'],
+  ['Facebook page link', '', 'Full link to the P&C Facebook page, for the email and form footer. Blank = left out.'],
+  ['Membership line', 'Join the P&C for $1 via Qkr!', 'Footer line on emails and forms.'],
+  ['Branded emails', 'Yes', 'Yes = emails use the P&C design (logo, brand colours and fonts). No = plain text.'],
+  ['Logo file', 'https://drive.google.com/file/d/1oz7XvHtdJCFUA8JS6ZiTTbNs-yYGm-pc/view', 'Drive link to the full-colour logo PNG (Brand Assets). Used at the top of emails.'],
+  ['Form template', '', 'Drive link to a blank Google Form with the P&C theme set (see README). New sign-up forms copy its look. Blank = Google\'s default theme.'],
   ['Admin email', '', 'Gets alerts (waitlists, WWC issues, daily summary). Blank = the account that ran Setup.'],
   ['Event types', 'Event, Canteen, Uniform shop, Working bee', 'Comma-separated list for the Type drop-down on the Events tab.'],
   ['WWC required for types', 'Canteen', 'Event types whose forms ask for a WWC card (comma-separated). Other events never ask.'],
@@ -70,13 +95,13 @@ const DEFAULT_SETTINGS = [
   ['Reminder days before', '2', 'How many days before a shift the reminder is prepared.'],
   ['Auto-draft thank-yous', 'Yes', 'Yes = thank-you drafts are created automatically after each event. No = only from the menu.'],
   ['Thank-you days after event', '1', 'Gives coordinators time to fix hours and attendance before drafts are made.'],
-  ['Form intro', 'Thanks for offering to help! Tick every slot you can do. Full slots drop off the list automatically, and you\'ll get an email confirming your slots.', 'Shown at the top of every sign-up form.'],
+  ['Form intro', 'Thanks for offering to help. Tick every slot you can do – full slots drop off the list automatically, and you\'ll get an email confirming your slots. No experience needed, we\'ll show you the ropes.', 'Shown at the top of every sign-up form.'],
   ['Confirmation subject', 'You\'re on the roster for {EventName}', 'Placeholders: {FirstName} {Name} {EventName} {EventDate} {Location} {Shifts} {Hours} {Coordinator} {CoordinatorEmail} {SenderName} {PCName}'],
-  ['Confirmation body', 'Hi {FirstName},\n\nThanks for signing up to help at {EventName} ({EventDate}, {Location}). Here are your slots:\n{Shifts}\n\nIf you can no longer make it, just reply to this email.\n\nThank you!\n{SenderName}\n{PCName}', ''],
+  ['Confirmation body', 'Hi {FirstName},\n\nThanks for signing up to help at {EventName} ({EventDate}, {Location}). Here are your slots:\n{Shifts}\n\nIf you can no longer make it, just reply to this email and we\'ll sort it out.\n\nThank you!\n{SenderName}\n{PCName}', ''],
   ['Reminder subject', 'Reminder: {EventName} on {EventDate}', ''],
   ['Reminder body', 'Hi {FirstName},\n\nJust a friendly reminder that you\'re helping at {EventName} on {EventDate} at {Location}:\n{Shifts}\n\nIf anything has changed, please reply to let us know.\n\nSee you there!\n{SenderName}\n{PCName}', ''],
   ['Thank-you subject', 'Thank you for helping at {EventName}', ''],
-  ['Thank-you body', 'Hi {FirstName},\n\nThank you so much for volunteering at {EventName} on {EventDate}. You gave us {Hours}, helping with:\n{Shifts}\n\nEvents like this only happen because families like yours pitch in, and everything raised goes straight back to our kids.\n\nWith thanks,\n{SenderName}\n{PCName}', ''],
+  ['Thank-you body', 'Hi {FirstName},\n\nThank you so much for volunteering at {EventName} on {EventDate}. You gave us {Hours}, helping with:\n{Shifts}\n\nEvents like this only happen because families like yours pitch in, and every dollar raised goes back into our school.\n\nWith thanks,\n{SenderName}\n{PCName}', ''],
 ];
 
 /* ============================== Menu ============================== */
@@ -186,9 +211,9 @@ function setupRoster() {
       } else if (missing.length) {
         sh.getRange(1, existing.filter(String).length + 1, 1, missing.length).setValues([missing]);
       }
-      const lastCol = sh.getLastColumn();
-      sh.getRange(1, 1, 1, lastCol).setFontWeight('bold').setBackground('#e8f0fe').setWrap(true);
-      sh.setFrozenRows(1);
+      brandSheet_(sh, TAB_COLOURS[name]);
+    } else {
+      sh.setTabColor(TAB_COLOURS[name]);
     }
   });
 
@@ -203,6 +228,7 @@ function setupRoster() {
   add.forEach(r => { if (r[0] === 'Admin email' && !r[1]) r[1] = Session.getEffectiveUser().getEmail(); });
   if (add.length) set.getRange(set.getLastRow() + 1, 1, add.length, 3).setValues(add);
   set.getRange('B:B').setWrap(true);
+  set.getRange('C:C').setWrap(true).setFontColor(BRAND.midGrey);
   set.setColumnWidth(1, 220); set.setColumnWidth(2, 420); set.setColumnWidth(3, 420);
 
   formatSheets_();
@@ -214,6 +240,31 @@ function setupRoster() {
       'Set both to Australia/Perth (File › Settings, and Apps Script › Project settings) so dates line up.');
   }
   alert_('Setup complete.\n\nNext: P&C Roster › New event… to create your first event.\nCheck the Settings tab to adjust email wording and options.');
+}
+
+const TAB_COLOURS = {
+  [SH.EVENTS]: BRAND.deepNavy,
+  [SH.SLOTS]: BRAND.navy,
+  [SH.SIGNUPS]: BRAND.cyan,
+  [SH.VOLUNTEERS]: BRAND.cyan,
+  [SH.TEMPLATES]: BRAND.paleBlue,
+  [SH.STATS]: BRAND.navy,
+  [SH.SETTINGS]: BRAND.midGrey,
+};
+
+/** Brand styling for a data tab: Lato body, navy Nunito header row, Panel Tint banding. */
+function brandSheet_(sh, tabColour) {
+  const maxR = sh.getMaxRows(), maxC = sh.getMaxColumns();
+  const lastCol = Math.max(sh.getLastColumn(), 1);
+  sh.getRange(1, 1, maxR, maxC).setFontFamily(BRAND.bodyFont).setFontColor(BRAND.nearBlack).setFontSize(10);
+  sh.getBandings().forEach(b => b.remove());
+  sh.getRange(1, 1, maxR, lastCol).applyRowBanding()
+    .setHeaderRowColor(BRAND.navy).setFirstRowColor('#FFFFFF').setSecondRowColor(BRAND.panelTint);
+  sh.getRange(1, 1, 1, lastCol).setFontFamily(BRAND.headingFont).setFontWeight('bold').setFontColor('#FFFFFF')
+    .setWrap(true).setVerticalAlignment('middle');
+  sh.setRowHeight(1, 34);
+  sh.setFrozenRows(1);
+  if (tabColour) sh.setTabColor(tabColour);
 }
 
 function formatSheets_() {
@@ -235,7 +286,7 @@ function formatSheets_() {
   const rule = SpreadsheetApp.newDataValidation()
     .requireValueInRange(ev.getRange(`${evCol}2:${evCol}`), true).setAllowInvalid(true).build();
   sl.getRange(2, colIndex_(sl, 'Event ID'), sl.getMaxRows() - 1, 1).setDataValidation(rule);
-  ['Filled', 'Remaining'].forEach(h => sl.getRange(1, colIndex_(sl, h), sl.getMaxRows(), 1).setBackground('#f3f3f3'));
+  ['Filled', 'Remaining'].forEach(h => sl.getRange(2, colIndex_(sl, h), sl.getMaxRows() - 1, 1).setFontColor(BRAND.midGrey));
 
   const tp = sheet_(SH.TEMPLATES);
   setColumnFormat_(tp, 'Start', 'h:mm am/pm');
@@ -528,7 +579,7 @@ function buildForm_(eventId) {
   if (ev.formId) { try { form = FormApp.openById(ev.formId); } catch (e) { form = null; } }
   const created = !form;
   const title = `${ev.name} – volunteer sign-up`;
-  if (created) form = FormApp.create(title);
+  if (created) form = createForm_(title, st);
 
   form.setTitle(title)
     .setDescription(formDescription_(ev, slots, st))
@@ -641,7 +692,36 @@ function formDescription_(ev, slots, st) {
   const uniq = descs.filter((d, i) => descs.indexOf(d) === i);
   if (uniq.length) lines.push('', 'About the roles:', ...uniq);
   if (ev.coordinator || ev.coordinatorEmail) lines.push('', `Questions? ${[ev.coordinator, ev.coordinatorEmail].filter(String).join(' – ')}`);
+  lines.push('', '———', footerLine_(st));
   return lines.join('\n').trim();
+}
+
+/** The standard footer for public P&C pieces: email, Facebook, $1 membership via Qkr!. */
+function footerLine_(st) {
+  return [st['P&C name'], st['Public email'], st['Facebook page link'], st['Membership line']]
+    .map(x => String(x || '').trim()).filter(String).join(' · ');
+}
+
+/** New form: a copy of the branded template form if one is set (keeps its theme), else a plain form. */
+function createForm_(title, st) {
+  const tplId = driveId_(st['Form template']);
+  if (tplId) {
+    try {
+      const copy = DriveApp.getFileById(tplId).makeCopy(title);
+      const f = FormApp.openById(copy.getId());
+      f.getItems().forEach(it => f.deleteItem(it));
+      return f;
+    } catch (e) {
+      Logger.log('Could not copy the form template, using a plain form: ' + e);
+    }
+  }
+  return FormApp.create(title);
+}
+
+/** Pulls a Drive file ID out of a link (or returns a bare ID). */
+function driveId_(v) {
+  const m = String(v || '').match(/[-\w]{25,}/);
+  return m ? m[0] : '';
 }
 
 function tidyResponseSheet_(form, eventId) {
@@ -757,14 +837,13 @@ function processSignup_(ev, ans, timestamp) {
 
   // Confirmation to the volunteer.
   if (isYes_(st['Send sign-up confirmations'])) {
-    const lines = results.map(r => shiftLine_(r.s) + statusNote_(r.status));
-    const vars = templateVars_(ev, name, lines, sumHours_(results.filter(r => ACTIVE.indexOf(r.status) >= 0).map(r => hoursBetween_(r.s.start, r.s.end))), st);
+    const shifts = results.map(r => Object.assign({}, r.s, { note: statusNote_(r.status) }));
+    const vars = templateVars_(ev, name, shifts.map(shiftText_),
+      sumHours_(results.filter(r => ACTIVE.indexOf(r.status) >= 0).map(r => hoursBetween_(r.s.start, r.s.end))), st);
+    const m = composeEmail_('You\'re on the roster', st['Confirmation subject'], st['Confirmation body'], vars, shifts, ev, st);
     MailApp.sendEmail(clean_({
-      to: email,
-      subject: fill_(st['Confirmation subject'], vars),
-      body: fill_(st['Confirmation body'], vars),
-      name: vars.SenderName,
-      replyTo: ev.coordinatorEmail || st['Admin email'],
+      to: email, subject: m.subject, body: m.text, htmlBody: m.html, inlineImages: m.inlineImages,
+      name: vars.SenderName, replyTo: replyTo_(ev, st),
     }));
   }
 
@@ -835,21 +914,23 @@ function closeEvent_(eventId) {
     if (String(r['Thank-you']).trim()) return;
     const email = String(r['Email']).trim().toLowerCase();
     if (!email) return;
-    if (!people[email]) people[email] = { name: String(r['Name']), rows: [], lines: [], hours: [] };
+    if (!people[email]) people[email] = { name: String(r['Name']), rows: [], shifts: [], hours: [] };
     people[email].rows.push(i);
-    people[email].lines.push(shiftLine_({
+    people[email].shifts.push({
       date: toDate_(r['Slot date']) || ev.date, role: String(r['Role / task']),
       start: parseTime_(t.disp[i]['Start']), end: parseTime_(t.disp[i]['End']),
-    }));
+    });
     people[email].hours.push(h);
   });
 
   let drafts = 0;
   Object.keys(people).forEach(email => {
     const p = people[email];
-    const vars = templateVars_(ev, p.name, p.lines, sumHours_(p.hours), st);
-    GmailApp.createDraft(email, fill_(st['Thank-you subject'], vars), fill_(st['Thank-you body'], vars),
-      clean_({ name: vars.SenderName, replyTo: ev.coordinatorEmail }));
+    const vars = templateVars_(ev, p.name, p.shifts.map(shiftText_), sumHours_(p.hours), st);
+    const m = composeEmail_('Thank you', st['Thank-you subject'], st['Thank-you body'], vars, p.shifts, ev, st);
+    GmailApp.createDraft(email, m.subject, m.text, clean_({
+      htmlBody: m.html, inlineImages: m.inlineImages, name: vars.SenderName, replyTo: replyTo_(ev, st),
+    }));
     p.rows.forEach(i => t.set(i, 'Thank-you', stamp));
     drafts++;
   });
@@ -880,9 +961,9 @@ function dailyRosterJob() {
       const d = toDate_(r['Slot date']);
       if (!d || dateKey_(d) !== target || !r['Email']) return;
       const k = r['Event ID'] + '|' + String(r['Email']).toLowerCase();
-      if (!groups[k]) groups[k] = { eventId: String(r['Event ID']), email: String(r['Email']).toLowerCase(), name: String(r['Name']), rows: [], lines: [], hours: [] };
+      if (!groups[k]) groups[k] = { eventId: String(r['Event ID']), email: String(r['Email']).toLowerCase(), name: String(r['Name']), rows: [], shifts: [], hours: [] };
       groups[k].rows.push(i);
-      groups[k].lines.push(shiftLine_({ date: d, role: String(r['Role / task']), start: parseTime_(t.disp[i]['Start']), end: parseTime_(t.disp[i]['End']) }));
+      groups[k].shifts.push({ date: d, role: String(r['Role / task']), start: parseTime_(t.disp[i]['Start']), end: parseTime_(t.disp[i]['End']) });
       groups[k].hours.push(Number(r['Scheduled hours']) || 0);
     });
     let n = 0;
@@ -890,11 +971,11 @@ function dailyRosterJob() {
       const g = groups[k];
       const ev = getEvent_(g.eventId);
       if (!ev) return;
-      const vars = templateVars_(ev, g.name, g.lines, sumHours_(g.hours), st);
+      const vars = templateVars_(ev, g.name, g.shifts.map(shiftText_), sumHours_(g.hours), st);
       vars.EventDate = fmtDate_(keyToDate_(target), 'EEEE d MMMM'); // the shift's day (matters for multi-day rosters like canteen weeks)
-      const subject = fill_(st['Reminder subject'], vars), body = fill_(st['Reminder body'], vars);
-      const opts = clean_({ name: vars.SenderName, replyTo: ev.coordinatorEmail });
-      if (mode === 'send') GmailApp.sendEmail(g.email, subject, body, opts); else GmailApp.createDraft(g.email, subject, body, opts);
+      const m = composeEmail_('Reminder', st['Reminder subject'], st['Reminder body'], vars, g.shifts, ev, st);
+      const opts = clean_({ htmlBody: m.html, inlineImages: m.inlineImages, name: vars.SenderName, replyTo: replyTo_(ev, st) });
+      if (mode === 'send') GmailApp.sendEmail(g.email, m.subject, m.text, opts); else GmailApp.createDraft(g.email, m.subject, m.text, opts);
       g.rows.forEach(i => t.set(i, 'Reminder', (mode === 'send' ? 'Sent ' : 'Drafted ') + fmtDate_(new Date(), 'd MMM')));
       n++;
     });
@@ -1016,14 +1097,21 @@ function refreshStats_() {
 
   const sh = sheet_(SH.STATS);
   sh.clear();
-  sh.getRange(1, 1).setValue(`Counts only shifts that have happened and weren't marked Attended = No. Updated ${fmtDate_(new Date(), 'd MMM yyyy h:mm a')}.`).setFontStyle('italic');
-  let row = 3;
+  sh.setHiddenGridlines(true);
+  sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).setFontFamily(BRAND.bodyFont).setFontColor(BRAND.nearBlack).setFontSize(10);
+  sh.getRange(1, 1).setValue('Volunteer stats').setFontFamily(BRAND.headingFont).setFontWeight('bold').setFontSize(18).setFontColor(BRAND.deepNavy);
+  sh.getRange(2, 1).setValue(`Counts only shifts that have happened and weren't marked Attended = No. Updated ${fmtDate_(new Date(), 'd MMM yyyy h:mm a')}.`)
+    .setFontColor(BRAND.midGrey);
+  let row = 4;
   blocks.forEach(b => {
     const width = b[1].length;
     const data = b.map(r => { const x = r.slice(0, width); while (x.length < width) x.push(''); return x; });
     sh.getRange(row, 1, data.length, width).setValues(data);
-    sh.getRange(row, 1).setFontWeight('bold').setFontSize(12);
-    sh.getRange(row + 1, 1, 1, width).setFontWeight('bold').setBackground('#e8f0fe');
+    sh.getRange(row, 1).setFontFamily(BRAND.headingFont).setFontWeight('bold').setFontSize(13).setFontColor(BRAND.navy);
+    sh.getRange(row + 1, 1, 1, width).setFontFamily(BRAND.headingFont).setFontWeight('bold')
+      .setBackground(BRAND.navy).setFontColor('#FFFFFF');
+    if (data.length > 2) sh.getRange(row + 2, 1, data.length - 2, width).setBackground(BRAND.panelTint)
+      .setBorder(null, null, true, null, null, true, BRAND.paleBlue, SpreadsheetApp.BorderStyle.SOLID);
     if (width === 8 && data.length > 2) sh.getRange(row + 2, 3, data.length - 2, 1).setNumberFormat('d mmm yyyy');
     row += data.length + 2;
   });
@@ -1067,10 +1155,113 @@ function shiftLine_(s) {
 }
 
 function statusNote_(status) {
-  if (status === 'Waitlist') return ' – this slot was already full, so you\'re on the waitlist. We\'ll let you know if a spot opens.';
-  if (status === 'Pending WWC') return ' – we need a current Working with Children card for this shift. Please reply with your card number and expiry date.';
-  if (status === 'Already booked') return ' – you were already booked for this one.';
+  if (status === 'Waitlist') return 'This slot was already full, so you\'re on the waitlist. We\'ll let you know if a spot opens.';
+  if (status === 'Pending WWC') return 'We need a current Working with Children card for this shift. Please reply with your card number and expiry date.';
+  if (status === 'Already booked') return 'You were already booked for this one.';
   return '';
+}
+
+/** One shift as a plain-text line, with any status note. */
+function shiftText_(s) {
+  return shiftLine_(s) + (s.note ? ` – ${s.note}` : '');
+}
+
+function replyTo_(ev, st) {
+  return ev.coordinatorEmail || st['Public email'] || st['Admin email'];
+}
+
+/* ============================== Branded email ============================== */
+
+/**
+ * Builds subject, plain text and (if Branded emails = Yes) the HTML version.
+ * The wording comes from the Settings templates; the HTML adds the P&C design around it.
+ */
+function composeEmail_(kicker, subjectTpl, bodyTpl, vars, shifts, ev, st) {
+  const subject = fill_(subjectTpl, vars);
+  const footer = footerLine_(st);
+  const text = fill_(bodyTpl, Object.assign({}, vars, { Shifts: shifts.map(shiftText_).join('\n') })) +
+    (footer ? '\n\n—\n' + footer : '');
+  if (!isYes_(st['Branded emails'])) return { subject, text };
+  const logo = logoBlob_(st);
+  return {
+    subject, text,
+    html: emailHtml_(kicker, bodyTpl, vars, shifts, ev, st, !!logo),
+    inlineImages: logo ? { pclogo: logo } : undefined,
+  };
+}
+
+let LOGO_CACHE_;
+function logoBlob_(st) {
+  if (LOGO_CACHE_ !== undefined) return LOGO_CACHE_;
+  LOGO_CACHE_ = null;
+  const id = driveId_(st['Logo file']);
+  if (id) {
+    try { LOGO_CACHE_ = DriveApp.getFileById(id).getBlob().setName('pc-logo'); } catch (e) { Logger.log('Logo not found: ' + e); }
+  }
+  return LOGO_CACHE_;
+}
+
+function emailHtml_(kicker, bodyTpl, vars, shifts, ev, st, hasLogo) {
+  const B = BRAND;
+  const TOKEN = '@@SHIFTS@@';
+  const para = t => `<p style="margin:0 0 16px;font-family:${B.bodyStack};font-size:15px;line-height:1.6;color:${B.nearBlack};">${esc_(t).replace(/\n/g, '<br>')}</p>`;
+  const body = fill_(bodyTpl, Object.assign({}, vars, { Shifts: TOKEN })).split(/\n{2,}/).map(chunk => {
+    if (chunk.indexOf(TOKEN) < 0) return chunk.trim() ? para(chunk.trim()) : '';
+    const parts = chunk.split(TOKEN);
+    return parts.map((x, i) => (x.trim() ? para(x.trim()) : '') + (i < parts.length - 1 ? shiftsHtml_(shifts) : '')).join('');
+  }).join('');
+
+  const pcName = esc_(st['P&C name'] || '');
+  const when = [vars.EventDate, ev.location].filter(String).join(' · ');
+  const logo = hasLogo
+    ? `<img src="cid:pclogo" alt="${pcName}" height="56" style="display:block;height:56px;width:auto;border:0;">`
+    : `<span style="font-family:${B.headingStack};font-weight:800;font-size:20px;color:${B.navy};">${pcName}</span>`;
+  const footerBits = [];
+  if (st['Public email']) footerBits.push(`<a href="mailto:${esc_(st['Public email'])}" style="color:${B.lightCyan};text-decoration:underline;">${esc_(st['Public email'])}</a>`);
+  if (st['Facebook page link']) footerBits.push(`<a href="${esc_(st['Facebook page link'])}" style="color:${B.lightCyan};text-decoration:underline;">Facebook</a>`);
+
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Lato:wght@400;700&display=swap" rel="stylesheet"></head>
+<body style="margin:0;padding:0;background:${B.offWhite};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${B.offWhite};"><tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#FFFFFF;border:1px solid ${B.paleBlue};border-radius:16px;overflow:hidden;">
+<tr><td style="padding:24px 28px 16px;">${logo}</td></tr>
+<tr><td style="padding:0 28px;"><div style="height:4px;line-height:4px;font-size:0;background:${B.cyan};border-radius:2px;">&nbsp;</div></td></tr>
+<tr><td style="padding:22px 28px 8px;">
+<div style="font-family:${B.headingStack};font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${B.navy};margin:0 0 6px;">${esc_(kicker)}</div>
+<div style="font-family:${B.headingStack};font-size:24px;font-weight:800;line-height:1.25;color:${B.deepNavy};margin:0 0 4px;">${esc_(ev.name)}</div>
+${when ? `<div style="font-family:${B.bodyStack};font-size:14px;line-height:1.5;color:${B.midGrey};margin:0 0 20px;">${esc_(when)}</div>` : ''}
+${body}
+</td></tr>
+<tr><td style="background:${B.deepNavy};padding:18px 28px;font-family:${B.bodyStack};font-size:13px;line-height:1.7;color:#FFFFFF;">
+<span style="font-family:${B.headingStack};font-weight:800;font-size:14px;">${pcName}</span><br>
+${footerBits.join(' &nbsp;·&nbsp; ')}${st['Membership line'] ? (footerBits.length ? '<br>' : '') + esc_(st['Membership line']) : ''}
+</td></tr>
+</table></td></tr></table></body></html>`;
+}
+
+/** Shifts as a Panel Tint card with navy date tiles. */
+function shiftsHtml_(shifts) {
+  const B = BRAND;
+  const rows = shifts.map(s => {
+    const tr = timeRange_(s);
+    return `<tr>
+<td width="64" valign="top" style="padding:12px 0 12px 12px;">
+<table role="presentation" width="52" cellpadding="0" cellspacing="0" style="background:${B.navy};border-radius:10px;"><tr>
+<td align="center" style="padding:6px 0;font-family:${B.headingStack};color:#FFFFFF;">
+<div style="font-size:10px;font-weight:700;letter-spacing:1px;line-height:1.2;">${esc_(fmtDate_(s.date, 'EEE').toUpperCase())}</div>
+<div style="font-size:20px;font-weight:900;line-height:1.15;">${esc_(fmtDate_(s.date, 'd'))}</div>
+<div style="font-size:10px;font-weight:700;letter-spacing:1px;line-height:1.2;">${esc_(fmtDate_(s.date, 'MMM').toUpperCase())}</div>
+</td></tr></table></td>
+<td valign="middle" style="padding:12px 14px;font-family:${B.bodyStack};font-size:15px;line-height:1.45;color:${B.nearBlack};">
+<span style="font-family:${B.headingStack};font-weight:800;">${esc_(s.role)}</span>${tr ? `<br><span style="color:${B.midGrey};">${esc_(tr)}</span>` : ''}${s.note ? `<br><span style="font-size:13px;color:${B.navy};">${esc_(s.note)}</span>` : ''}
+</td></tr>`;
+  }).join('');
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${B.panelTint};border-radius:12px;margin:0 0 16px;">${rows}</table>`;
+}
+
+function esc_(v) {
+  return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /* ============================== Pure helpers (unit-tested) ============================== */

@@ -2,23 +2,37 @@
 <html>
 <head>
   <base target="_top">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; font-size: 13px; color: #202124; margin: 0; padding: 4px 8px; }
-    label { display: block; font-weight: bold; margin: 12px 0 4px; }
-    .hint { font-weight: normal; color: #5f6368; font-size: 12px; }
-    input, select, textarea { width: 100%; box-sizing: border-box; padding: 7px; font-size: 13px; border: 1px solid #dadce0; border-radius: 4px; font-family: inherit; }
-    textarea { height: 60px; resize: vertical; }
-    .row { display: flex; gap: 8px; } .row > div { flex: 1; }
-    .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-weight: normal; }
-    .check input { width: auto; }
-    button { margin-top: 16px; padding: 9px 18px; font-size: 14px; border: 0; border-radius: 4px; cursor: pointer; }
-    .primary { background: #1a73e8; color: #fff; } .primary:disabled { background: #9ab7e8; }
-    .secondary { background: #f1f3f4; color: #202124; margin-left: 6px; }
-    #msg { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; word-break: break-word; }
-    .ok { background: #e6f4ea; } .err { background: #fce8e6; }
+    /* Wembley PS P&C Brand Identity Guide v1.1 */
+    :root { --deep-navy:#1E3D7A; --navy:#2E5AAC; --cyan:#3CADD4; --near-black:#1A2744; --mid-grey:#5A6A8A;
+            --pale-blue:#DDE6F5; --off-white:#F7F9FC; --panel-tint:#F1F6FC; --cyan-tint:#EAF6FB; --coral:#C2412E; }
+    body { font-family: 'Lato', 'Helvetica Neue', Helvetica, sans-serif; font-size: 14px; color: var(--near-black); background: #fff; margin: 0; padding: 4px 8px 12px; }
+    .kicker { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--navy); }
+    .rule { height: 4px; background: var(--cyan); border-radius: 2px; margin: 6px 0 4px; }
+    label { display: block; font-family: 'Nunito', sans-serif; font-weight: 800; color: var(--deep-navy); margin: 14px 0 5px; }
+    .hint { font-family: 'Lato', sans-serif; font-weight: 400; color: var(--mid-grey); font-size: 12.5px; }
+    input, select, textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 14px; color: var(--near-black);
+      border: 1px solid var(--pale-blue); border-radius: 8px; font-family: inherit; background: #fff; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--cyan); outline-offset: 0; border-color: var(--cyan); }
+    textarea { height: 64px; resize: vertical; }
+    .row { display: flex; gap: 10px; } .row > div { flex: 1; }
+    .check { display: flex; align-items: center; gap: 8px; margin-top: 16px; font-family: 'Lato', sans-serif; font-weight: 400; color: var(--near-black); }
+    .check input { width: auto; accent-color: var(--navy); }
+    button { margin-top: 18px; padding: 10px 20px; font-size: 14px; border-radius: 8px; cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 700; }
+    .primary { background: var(--navy); color: #fff; border: 2px solid var(--navy); }
+    .primary:hover { background: var(--deep-navy); border-color: var(--deep-navy); }
+    .primary:disabled { opacity: .55; cursor: default; }
+    .secondary { background: #fff; color: var(--navy); border: 2px solid var(--pale-blue); margin-left: 6px; }
+    #msg { margin-top: 14px; padding: 12px 14px; border-radius: 12px; display: none; white-space: pre-wrap; word-break: break-word; }
+    #msg a { color: var(--navy); font-weight: 700; }
+    .ok { background: var(--cyan-tint); border-left: 4px solid var(--navy); }
+    .err { background: #fff; border: 1px solid var(--pale-blue); border-left: 4px solid var(--coral); color: var(--coral); }
   </style>
 </head>
 <body>
+  <div class="kicker">P&amp;C volunteer roster</div>
+  <div class="rule"></div>
   <label>Event name</label>
   <input id="name" placeholder="e.g. Election day sausage sizzle">
 

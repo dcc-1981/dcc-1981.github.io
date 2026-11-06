@@ -29,7 +29,8 @@ A volunteer roster that runs inside one Google Sheet. Coordinators build an even
    - Click **Save**.
 4. Go back to the sheet and reload it. A **P&C Roster** menu appears.
 5. Click **P&C Roster › Setup / repair**. Google will ask you to authorise the script. It needs access to the sheet, Forms (to build sign-up forms), Gmail (to save drafts and send confirmations) and triggers (for the daily check). Click through "Advanced › Go to project" if Google warns that the app isn't verified. That's normal for your own scripts.
-6. Check the **Settings** tab: P&C name, sender name, admin email and email wording.
+6. Check the **Settings** tab: P&C name, sender name, admin email and email wording. Add the **Facebook page link** so it appears in the email and form footers.
+7. Make the branded master form (once). See *P&C branding* below.
 
 > Run Setup from the account that should own the drafts and send the emails, ideally a shared P&C account rather than a personal one. The daily check and the thank-you drafts run as that account.
 
@@ -78,6 +79,32 @@ T-shirt size
 | Notify coordinator of each sign-up | Yes / No (waitlist and WWC problems are always flagged) |
 | Reminder emails | Off / Draft / Send |
 | Auto-draft thank-yous | Yes / No |
+
+## P&C branding
+
+Everything follows the **Brand Identity Guide v1.1 (Oct 2026)**. Where this README and the guide differ, the guide wins.
+
+| Where | What's applied |
+|---|---|
+| **Emails** (confirmations, reminders, thank-you drafts) | The full-colour logo on white, a Wembley Cyan rule, a small navy caps label, and the event name as a Nunito Deep Navy heading. Body text is Lato in Near-Black. Shifts sit on a Panel Tint card with Wembley Navy date tiles. The Deep Navy footer carries hello@wembleypc.org.au, Facebook and "Join the P&C for $1 via Qkr!". A plain-text version is always included. |
+| **Sign-up forms** | Each form copies the branded master form (below), and the description ends with the standard footer. |
+| **The Sheet** | Navy header rows in Nunito, Lato throughout, Panel Tint row banding, brand tab colours, and a styled Stats tab. |
+| **Dialogs** | Nunito labels, Lato text, navy rounded buttons, Pale Blue inputs and a cyan focus ring. There's never white text on cyan. |
+| **Wording** | Follows the voice guide: warm and plain, at most one exclamation mark per message, no guilt-tripping. ("Even one shift makes a difference" rather than "we desperately need you".) |
+
+**Logo.** The *Logo file* setting points to `Wembley P&C Logo.png` in the Brand Assets shared drive. Emails attach it from there, so whoever runs Setup needs access to that file. If it can't be found, the email header falls back to "Wembley PS P&C" in Nunito navy.
+
+**Branded master form (one-off, about 5 minutes).** Google doesn't let scripts set a form's theme, so make one branded form and every new sign-up form will copy it:
+1. In Google Forms, create a blank form called *P&C sign-up – master (don't delete)*.
+2. Click the palette icon (**Customise theme**):
+   - **Header:** upload a 1600 × 400 px banner. Make it in Canva with the P&C brand kit: an off-white background, the full-colour logo top left, a Nunito navy title such as "Volunteer sign-up", and a cyan rule or arc accent.
+   - **Colour:** custom **#2E5AAC** (Wembley Navy). Choose the lightest background option.
+   - **Text style:** choose **Lato** or **Nunito** if they're in the font list. Avoid Roboto and Arial.
+3. Leave the form with no questions. Copy its link from the address bar into **Settings › Form template**.
+
+Forms created before you set the template keep Google's default look. To update one, either recreate the event, or apply the same theme to it by hand (palette icon).
+
+**Not covered yet.** The Hungry Lion canteen has its own orange-and-cream sub-brand. Canteen emails and forms currently use the main P&C look.
 
 ## Good to know
 
