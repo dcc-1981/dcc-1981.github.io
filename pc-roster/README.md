@@ -16,7 +16,10 @@ A volunteer roster that runs inside one Google Sheet. Coordinators build an even
 | **Stats** | Hours, unique volunteers and shifts by year, by event type and by event. Each volunteer's running total is on the Volunteers tab. |
 | **Daily check (7am)** | Prepares reminders, finishes past events, notices free spots with a waitlist, flags WWC issues, and emails you a short summary only when something needs attention. |
 
-## One-time setup (about 10 minutes)
+## One-time setup (about 15 minutes)
+
+New to this? Follow the illustrated step-by-step guide: **[PC Volunteer Roster - Setup Guide.pdf](PC%20Volunteer%20Roster%20-%20Setup%20Guide.pdf)**. Its source is in `guide/`.
+
 
 1. Create a new Google Sheet in the P&C's Google account, e.g. *P&C Volunteer Roster*.
    Check **File › Settings › Time zone** is *(GMT+08:00) Perth*.
