@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #202124; margin: 0; padding: 4px 8px; }
+    label { display: block; font-weight: bold; margin: 12px 0 4px; }
+    .hint { font-weight: normal; color: #5f6368; font-size: 12px; }
+    input, select, textarea { width: 100%; box-sizing: border-box; padding: 7px; font-size: 13px; border: 1px solid #dadce0; border-radius: 4px; font-family: inherit; }
+    textarea { height: 60px; resize: vertical; }
+    .row { display: flex; gap: 8px; } .row > div { flex: 1; }
+    .check { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-weight: normal; }
+    .check input { width: auto; }
+    button { margin-top: 16px; padding: 9px 18px; font-size: 14px; border: 0; border-radius: 4px; cursor: pointer; }
+    .primary { background: #1a73e8; color: #fff; } .primary:disabled { background: #9ab7e8; }
+    .secondary { background: #f1f3f4; color: #202124; margin-left: 6px; }
+    #msg { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; word-break: break-word; }
+    .ok { background: #e6f4ea; } .err { background: #fce8e6; }
+  </style>
+</head>
+<body>
+  <label>Event name</label>
+  <input id="name" placeholder="e.g. Election day sausage sizzle">
+
+  <div class="row">
+    <div><label>Type</label><select id="type"></select></div>
+    <div><label>Date</label><input id="date" type="date"></div>
+  </div>
+
+  <label>Location</label>
+  <input id="location" placeholder="e.g. School undercover area">
+
+  <div class="row">
+    <div><label>Coordinator</label><input id="coordinator" placeholder="Name"></div>
+    <div><label>Coordinator email</label><input id="coordinatorEmail" type="email" placeholder="name@example.com"></div>
+  </div>
+
+  <label>Start from <span class="hint">– copies the slots, shifted to the new date</span></label>
+  <select id="source">
+    <option value="">Blank – I'll add slots myself</option>
+    <optgroup label="Templates" id="tpls"></optgroup>
+    <optgroup label="Copy a previous event" id="evs"></optgroup>
+  </select>
+
+  <label>Extra questions <span class="hint">(optional) one per line. *Required. Choices in [Yes|No]</span></label>
+  <textarea id="extra" placeholder="Can you bring a plate to share? [Yes|No]&#10;*Do you have a current food handling certificate? [Yes|No]"></textarea>
+  <div class="hint">Leave blank to use the template's or previous event's questions.</div>
+
+  <label class="check"><input type="checkbox" id="createForm" checked> Create the sign-up form straight away</label>
+  <div class="hint">Untick if you want to tweak slots on the Slots tab first (then use “Create / update sign-up form”).</div>
+
+  <button class="primary" id="go" onclick="go()">Create event</button>
+  <button class="secondary" onclick="google.script.host.close()">Close</button>
+  <div id="msg"></div>
+
+  <script>
+    google.script.run.withSuccessHandler(function (d) {
+      var t = document.getElementById('type');
+      d.types.forEach(function (x) { t.add(new Option(x, x)); });
+      var tp = document.getElementById('tpls');
+      d.templates.forEach(function (x) { tp.appendChild(new Option(x, 'T:' + x)); });
+      var ev = document.getElementById('evs');
+      d.events.forEach(function (x) { ev.appendChild(new Option(x.label, 'E:' + x.id)); });
+      document.getElementById('coordinatorEmail').value = d.adminEmail || '';
+    }).getDialogData();
+
+    function v(id) { return document.getElementById(id).value; }
+
+    function show(text, ok) {
+      var m = document.getElementById('msg');
+      m.className = ok ? 'ok' : 'err';
+      m.style.display = 'block';
+      m.innerHTML = '';
+      m.appendChild(document.createTextNode(text));
+      return m;
+    }
+
+    function go() {
+      var data = {
+        name: v('name'), type: v('type'), date: v('date'), location: v('location'),
+        coordinator: v('coordinator'), coordinatorEmail: v('coordinatorEmail'),
+        source: v('source'), extraQuestions: v('extra'),
+        createForm: document.getElementById('createForm').checked
+      };
+      if (!data.name || !data.date) { show('Please enter an event name and date.', false); return; }
+      var b = document.getElementById('go');
+      b.disabled = true; b.textContent = 'Creating…';
+      google.script.run
+        .withSuccessHandler(function (r) {
+          b.textContent = 'Done';
+          var text = r.id + ' created with ' + r.slots + ' slot(s).\n\n' +
+            (r.url ? 'Sign-up form link (share this with families):\n' :
+              'Next: add or edit slots on the Slots tab (now showing just this event), then use P&C Roster › Create / update sign-up form.');
+          var m = show(text, true);
+          if (r.url) {
+            var a = document.createElement('a'); a.href = r.url; a.target = '_blank'; a.textContent = r.url;
+            m.appendChild(a);
+          }
+        })
+        .withFailureHandler(function (e) { b.disabled = false; b.textContent = 'Create event'; show(e.message, false); })
+        .createEventFromDialog(data);
+    }
+  </script>
+</body>
+</html>

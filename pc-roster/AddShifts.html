@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #202124; margin: 0; padding: 4px 8px; }
+    label { display: block; font-weight: bold; margin: 12px 0 4px; }
+    .hint { font-weight: normal; color: #5f6368; font-size: 12px; }
+    input, select { width: 100%; box-sizing: border-box; padding: 7px; font-size: 13px; border: 1px solid #dadce0; border-radius: 4px; font-family: inherit; }
+    .row { display: flex; gap: 8px; } .row > div { flex: 1; }
+    button { margin-top: 16px; padding: 9px 18px; font-size: 14px; border: 0; border-radius: 4px; cursor: pointer; }
+    .primary { background: #1a73e8; color: #fff; } .primary:disabled { background: #9ab7e8; }
+    .secondary { background: #f1f3f4; color: #202124; margin-left: 6px; }
+    #msg { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; }
+    .ok { background: #e6f4ea; } .err { background: #fce8e6; }
+  </style>
+</head>
+<body>
+  <div class="hint">Turns a block of time into shifts, e.g. 8am–2pm in 2-hour shifts = 3 rows. Run it again for each role.</div>
+
+  <label>Event</label>
+  <select id="event"></select>
+
+  <label>Role / task</label>
+  <input id="role" placeholder="e.g. BBQ cook">
+
+  <label>Date <span class="hint">– leave as is for the event date</span></label>
+  <input id="date" type="date">
+
+  <div class="row">
+    <div><label>From</label><input id="from" type="time" value="09:00"></div>
+    <div><label>To</label><input id="to" type="time" value="12:00"></div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label>Shift length</label>
+      <select id="length">
+        <option value="">One shift (whole block)</option>
+        <option value="30">30 minutes</option>
+        <option value="60" selected>1 hour</option>
+        <option value="90">1.5 hours</option>
+        <option value="120">2 hours</option>
+        <option value="180">3 hours</option>
+      </select>
+    </div>
+    <div><label>People per shift</label><input id="spots" type="number" min="1" value="2"><div class="hint">Blank = no limit</div></div>
+  </div>
+
+  <label>Description <span class="hint">(optional, shown on the form)</span></label>
+  <input id="description" placeholder="e.g. Closed shoes please">
+
+  <button class="primary" id="go" onclick="go()">Add shifts</button>
+  <button class="secondary" onclick="google.script.host.close()">Close</button>
+  <div id="msg"></div>
+
+  <script>
+    var events = [];
+    google.script.run.withSuccessHandler(function (d) {
+      events = d.events.filter(function (e) { return e.status !== 'Done'; });
+      var s = document.getElementById('event');
+      events.forEach(function (e) { s.add(new Option(e.label, e.id)); });
+      s.onchange = setDate; setDate();
+    }).getDialogData();
+
+    function setDate() {
+      var id = document.getElementById('event').value;
+      var e = events.filter(function (x) { return x.id === id; })[0];
+      if (e) document.getElementById('date').value = e.date;
+    }
+    function v(id) { return document.getElementById(id).value; }
+    function show(t, ok) { var m = document.getElementById('msg'); m.className = ok ? 'ok' : 'err'; m.style.display = 'block'; m.textContent = t; }
+
+    function go() {
+      var b = document.getElementById('go');
+      b.disabled = true;
+      google.script.run
+        .withSuccessHandler(function (r) {
+          b.disabled = false;
+          show('Added ' + r.added + ' shift(s).' + (r.formUpdated ? ' The sign-up form has been updated too.' : ''), true);
+        })
+        .withFailureHandler(function (e) { b.disabled = false; show(e.message, false); })
+        .addShiftsFromDialog({
+          eventId: v('event'), role: v('role'), date: v('date'), from: v('from'), to: v('to'),
+          length: v('length'), spots: v('spots'), description: v('description')
+        });
+    }
+  </script>
+</body>
+</html>
