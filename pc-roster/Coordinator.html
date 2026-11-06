@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* Wembley PS P&C Brand Identity Guide v1.1 */
+  :root { --deep-navy:#1E3D7A; --navy:#2E5AAC; --cyan:#3CADD4; --near-black:#1A2744; --mid-grey:#5A6A8A;
+          --pale-blue:#DDE6F5; --off-white:#F7F9FC; --panel:#F1F6FC; --cyan-tint:#EAF6FB; --coral:#C2412E; --sage:#3F7A5A; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--off-white); color: var(--near-black); font-family: 'Lato', 'Helvetica Neue', Helvetica, sans-serif; font-size: 16px; line-height: 1.5; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 16px 16px 96px; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 4px 0 12px; border-bottom: 3px solid var(--cyan); margin-bottom: 18px; }
+  header img { height: 52px; width: auto; display: block; }
+  header .pc { font-family: 'Nunito', sans-serif; font-weight: 800; color: var(--navy); font-size: 18px; }
+  .kicker { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--navy); }
+  h1 { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 28px; line-height: 1.15; color: var(--deep-navy); margin: 2px 0 6px; }
+  h2 { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 19px; color: var(--deep-navy); margin: 26px 0 10px; }
+  h3 { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 17px; color: var(--deep-navy); margin: 0; }
+  p { margin: 0 0 10px; }
+  .muted { color: var(--mid-grey); } .small { font-size: 14px; }
+  a { color: var(--navy); font-weight: 700; }
+  button, .btn { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px; border-radius: 10px; padding: 11px 16px; border: 2px solid var(--navy); background: var(--navy); color: #fff; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  button:hover, .btn:hover { background: var(--deep-navy); border-color: var(--deep-navy); }
+  .ghost { background: #fff; color: var(--navy); border-color: var(--pale-blue); }
+  .ghost:hover { background: var(--panel); border-color: var(--pale-blue); }
+  .link { background: none; border: 0; color: var(--navy); padding: 4px 0; font-size: 15px; }
+  .link:hover { background: none; text-decoration: underline; }
+  .danger { color: var(--coral); }
+  .big { width: 100%; padding: 14px; font-size: 17px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 auto; }
+  .card { background: #fff; border: 1px solid var(--pale-blue); border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; }
+  .card.click { cursor: pointer; } .card.click:hover { border-color: var(--cyan); }
+  .panel { background: var(--panel); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; }
+  .callout { background: var(--cyan-tint); border-left: 4px solid var(--navy); border-radius: 10px; padding: 10px 14px; margin: 10px 0; font-size: 15px; }
+  .pill { display: inline-block; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 12px; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+  .pill.open { background: var(--cyan-tint); color: var(--deep-navy); }
+  .pill.closed { background: var(--pale-blue); color: var(--deep-navy); }
+  .pill.full { background: var(--navy); color: #fff; }
+  .pill.done { background: #E7F1EB; color: var(--sage); }
+  .pill.warn { background: #FBE9E6; color: var(--coral); }
+  .bar { height: 8px; background: var(--pale-blue); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+  .bar span { display: block; height: 100%; background: var(--navy); border-radius: 99px; }
+  .spread { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  label { display: block; font-family: 'Nunito', sans-serif; font-weight: 800; color: var(--deep-navy); font-size: 14px; margin: 12px 0 4px; }
+  input, select, textarea { width: 100%; font: inherit; font-size: 16px; color: var(--near-black); border: 1px solid var(--pale-blue); border-radius: 10px; padding: 10px 12px; background: #fff; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--cyan); border-color: var(--cyan); }
+  textarea { min-height: 70px; resize: vertical; }
+  .hint { font-size: 13px; color: var(--mid-grey); margin-top: 3px; }
+  .person { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--pale-blue); }
+  .person:first-of-type { border-top: 0; }
+  .person .who b { font-family: 'Nunito', sans-serif; }
+  .openspot { padding: 8px 12px; margin-top: 6px; border: 2px dashed var(--pale-blue); border-radius: 10px; color: var(--mid-grey); font-size: 14px; }
+  .slotedit { background: #fff; border: 1px solid var(--pale-blue); border-radius: 14px; padding: 10px 12px 12px; margin-bottom: 10px; }
+  .slotedit .grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) 72px; gap: 8px; }
+  .slotedit .grid input { min-width: 0; padding-left: 8px; padding-right: 6px; }
+  .slotedit .grid label { margin-top: 6px; }
+  .slotedit .tools { display: flex; justify-content: flex-end; gap: 14px; margin-top: 6px; }
+  details summary { cursor: pointer; font-family: 'Nunito', sans-serif; font-weight: 800; color: var(--navy); padding: 8px 0; }
+  .sticky { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(247,249,252,.96); border-top: 1px solid var(--pale-blue); padding: 10px 16px; }
+  .sticky .inner { max-width: 640px; margin: 0 auto; }
+  #busy { position: fixed; inset: 0; background: rgba(247,249,252,.8); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 50; font-family: 'Nunito', sans-serif; font-weight: 800; color: var(--deep-navy); }
+  .spin { width: 34px; height: 34px; border: 4px solid var(--pale-blue); border-top-color: var(--navy); border-radius: 50%; animation: s 0.8s linear infinite; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 84px; max-width: 92%; background: var(--deep-navy); color: #fff; padding: 11px 16px; border-radius: 12px; z-index: 60; font-size: 15px; box-shadow: 0 6px 18px rgba(26,39,68,.2); }
+  #toast.err { background: #fff; color: var(--coral); border: 2px solid var(--coral); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><span id="logo"><span class="pc">Wembley PS P&amp;C</span></span><span class="kicker">Volunteer roster</span></header>
+  <div id="app"><p class="muted">Loading…</p></div>
+</div>
+<div id="busy" hidden><div class="spin"></div><div id="busyText">Loading…</div></div>
+<div id="toast" hidden></div>
+
+<script>
+const BOOT = <?!= boot ?>;
+const S = { home: null, ev: null, draft: null, adding: null, removing: null };
+
+/* ---------- helpers ---------- */
+function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function $(id) { return document.getElementById(id); }
+function call(fn, ...args) {
+  return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](BOOT.key, ...args));
+}
+async function run(text, fn, ...args) {
+  $('busyText').textContent = text; $('busy').hidden = false;
+  try { return await call(fn, ...args); }
+  catch (e) { toast((e && e.message) || 'Something went wrong. Please try again.', true); throw e; }
+  finally { $('busy').hidden = true; }
+}
+let toastTimer;
+function toast(msg, err) {
+  const t = $('toast'); t.textContent = msg; t.className = err ? 'err' : ''; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, err ? 6000 : 2600);
+}
+function copy(text, what) {
+  const ok = () => toast(what + ' copied – paste it wherever you like.');
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try { document.execCommand('copy'); ok(); } catch (e) { prompt('Copy this:', text); }
+    ta.remove();
+  };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(ok, fallback); else fallback();
+}
+function fmtTime(hhmm) {
+  if (!hhmm) return '';
+  let [h, m] = hhmm.split(':').map(Number); const ap = h < 12 ? 'am' : 'pm'; h = h % 12 || 12;
+  return m ? `${h}:${String(m).padStart(2, '0')}${ap}` : `${h}${ap}`;
+}
+function statusPill(ev) {
+  if (ev.past || ev.status === 'Done') return '<span class="pill done">Finished</span>';
+  if (ev.spots != null && ev.filled >= ev.spots) return '<span class="pill full">All filled</span>';
+  if (ev.status === 'Closed') return '<span class="pill closed">Sign-ups closed</span>';
+  if (ev.status === 'Draft') return '<span class="pill closed">Not published</span>';
+  return '<span class="pill open">Sign-ups open</span>';
+}
+function progress(ev) {
+  if (ev.spots == null) return `<div class="small muted" style="margin-top:6px">${ev.filled} signed up</div>`;
+  const pct = ev.spots ? Math.round(100 * ev.filled / ev.spots) : 0;
+  return `<div class="bar"><span style="width:${Math.min(pct, 100)}%"></span></div><div class="small muted" style="margin-top:4px">${ev.filled} of ${ev.spots} spots filled</div>`;
+}
+
+/* ---------- home ---------- */
+async function loadHome() {
+  S.home = await run('Loading…', 'cpLoad');
+  if (S.home.logo) $('logo').innerHTML = `<img src="${S.home.logo}" alt="${esc(S.home.pcName)}">`;
+  renderHome();
+}
+function renderHome() {
+  S.ev = null; S.draft = null;
+  const h = S.home;
+  const upcoming = h.events.filter(e => !e.past), past = h.events.filter(e => e.past).reverse();
+  const card = e => `<div class="card click" onclick="openEvent('${esc(e.id)}')">
+      <div class="spread"><div><h3>${esc(e.name)}</h3><div class="small muted">${esc(e.dateText)}</div></div>${statusPill(e)}</div>
+      ${progress(e)}</div>`;
+  $('app').innerHTML = `
+    <h1>Hi ${esc(h.name.split(' ')[0])}</h1>
+    <p class="muted">Set up an event, share the link, and see who's coming. Confirmations, reminders and thank-yous are handled for you.</p>
+    <button class="big" onclick="newEvent()">+ New event</button>
+    <h2>Your events</h2>
+    ${upcoming.length ? upcoming.map(card).join('') : '<div class="panel">No upcoming events yet. Tap <b>New event</b> – you can copy last year\'s and just change the date.</div>'}
+    ${past.length ? `<details><summary>Past events (${past.length})</summary>${past.map(card).join('')}</details>` : ''}`;
+  window.scrollTo(0, 0);
+}
+
+/* ---------- one event ---------- */
+async function openEvent(id) {
+  S.ev = await run('Loading…', 'cpEvent', id);
+  S.adding = null; S.removing = null;
+  renderEvent();
+  window.scrollTo(0, 0);
+}
+function renderEvent() {
+  const e = S.ev;
+  const byDate = {};
+  e.slots.forEach(s => { (byDate[s.date] = byDate[s.date] || []).push(s); });
+  const slotsHtml = Object.keys(byDate).sort().map(d => (e.multiDay ? `<h2>${esc(byDate[d][0].dateText)}</h2>` : '') + byDate[d].map(slotCard).join('')).join('');
+  const sharing = e.past || e.status === 'Done' ? '' : `
+    <div class="panel">
+      <div class="row">
+        <button onclick="copy(S.ev.formUrl, 'Sign-up link')">Copy sign-up link</button>
+        <button class="ghost" onclick="copy(S.ev.share, 'Message')">Copy message to share</button>
+      </div>
+      <div class="spread small" style="margin-top:10px;align-items:center">
+        <span>${e.status === 'Closed' ? 'Sign-ups are <b>closed</b>.' : 'Sign-ups are <b>open</b>.'} <a href="${esc(e.formUrl)}" target="_blank">See the form</a></span>
+        <button class="link" onclick="setOpen(${e.status === 'Closed'})">${e.status === 'Closed' ? 'Reopen sign-ups' : 'Close sign-ups'}</button>
+      </div>
+    </div>`;
+  $('app').innerHTML = `
+    <button class="link" onclick="backHome()">← Your events</button>
+    <div class="kicker" style="margin-top:8px">${esc(e.dateText)}</div>
+    <h1>${esc(e.name)}</h1>
+    <div class="muted">${esc(e.location || '')}</div>
+    ${progress(e)}
+    <div style="height:14px"></div>
+    ${sharing}
+    ${e.past ? '<div class="callout">This event has finished. Thank-you notes are prepared for you – just tap <b>Didn\'t come</b> for anyone who couldn\'t make it.</div>' : ''}
+    ${slotsHtml}
+    ${e.past ? '' : '<button class="ghost big" style="margin-top:12px" onclick="editEvent()">Edit event &amp; slots</button>'}`;
+}
+function slotCard(s) {
+  const e = S.ev;
+  const count = s.spots == null ? `<span class="pill open">${s.people.length} signed up</span>`
+    : s.open === 0 ? '<span class="pill full">Full</span>' : `<span class="pill open">${s.people.length} of ${s.spots}</span>`;
+  const people = s.people.map(p => {
+    const contact = [p.phone ? `<a href="tel:${esc(p.phone.replace(/\s/g, ''))}">${esc(p.phone)}</a>` : '', p.email ? `<span class="muted">${esc(p.email)}</span>` : ''].filter(Boolean).join(' · ');
+    let action;
+    if (e.past) {
+      action = p.attended === 'No'
+        ? `<button class="link danger" onclick="attended('${p.ref}', true)">Didn't come · undo</button>`
+        : `<button class="link" onclick="attended('${p.ref}', false)">Didn't come?</button>`;
+    } else if (S.removing === p.ref) {
+      action = `<span class="row" style="flex:0 0 auto"><button class="link danger" onclick="removePerson('${p.ref}')">Yes, remove</button><button class="link" onclick="S.removing=null;renderEvent()">Keep</button></span>`;
+    } else {
+      action = `<button class="link" onclick="S.removing='${p.ref}';renderEvent()">Remove</button>`;
+    }
+    return `<div class="person"><div class="who"><b>${esc(p.name)}</b>${p.status === 'Pending WWC' ? ' <span class="pill warn">Needs WWC check</span>' : ''}${p.attended === 'No' ? ' <span class="pill warn">Didn\'t come</span>' : ''}<div class="small">${contact}</div></div>${action}</div>`;
+  }).join('');
+  const openSpots = s.spots == null || e.past ? '' : Array.from({ length: Math.min(s.open, 3) }, () => '<div class="openspot">Open spot</div>').join('') + (s.open > 3 ? `<div class="small muted" style="margin-top:4px">+ ${s.open - 3} more open</div>` : '');
+  const wait = s.waitlist.length ? `<div class="small" style="margin-top:8px"><b>Waitlist:</b> ${s.waitlist.map(w => `${esc(w.name)}${s.open ? ` <button class="link" onclick="promote('${w.ref}')">Add to slot</button>` : ''}`).join(', ')}</div>` : '';
+  const add = e.past ? '' : S.adding === s.n ? `
+      <div class="panel" style="margin:10px 0 0">
+        <label>Name</label><input id="addName" autocomplete="off">
+        <label>Mobile</label><input id="addPhone" inputmode="tel" autocomplete="off">
+        <label>Email <span class="muted small">(optional – they'll get a confirmation)</span></label><input id="addEmail" inputmode="email" autocomplete="off">
+        <div class="row" style="margin-top:12px"><button onclick="addPerson(${s.n})">Add</button><button class="ghost" onclick="S.adding=null;renderEvent()">Cancel</button></div>
+      </div>`
+    : (s.open !== 0 ? `<button class="link" style="margin-top:6px" onclick="S.adding=${s.n};renderEvent();setTimeout(()=>$('addName').focus(),0)">+ Add someone</button>` : '');
+  return `<div class="card">
+      <div class="spread"><div><h3>${esc(s.role)}</h3><div class="small muted">${esc(s.timeText)}${s.desc ? ' · ' + esc(s.desc) : ''}</div></div>${count}</div>
+      <div style="margin-top:6px">${people}</div>${openSpots}${wait}${add}</div>`;
+}
+async function setOpen(open) { S.ev = await run(open ? 'Reopening…' : 'Closing…', 'cpSetOpen', S.ev.id, open); renderEvent(); toast(open ? 'Sign-ups reopened.' : 'Sign-ups closed.'); }
+async function removePerson(ref) { S.ev = await run('Removing…', 'cpRemove', S.ev.id, ref); S.removing = null; renderEvent(); toast('Removed. The spot is open again on the form.'); }
+async function promote(ref) { S.ev = await run('Adding…', 'cpPromote', S.ev.id, ref); renderEvent(); toast('Added to the slot. Let them know they\'re in.'); }
+async function attended(ref, came) { S.ev = await run('Saving…', 'cpAttended', S.ev.id, ref, came); renderEvent(); }
+async function addPerson(n) {
+  const p = { name: $('addName').value, phone: $('addPhone').value, email: $('addEmail').value };
+  S.ev = await run('Adding…', 'cpAddPerson', S.ev.id, n, p);
+  S.adding = null; renderEvent(); toast(p.email ? 'Added – they\'ll get a confirmation email.' : 'Added.');
+}
+async function backHome() { await loadHome(); }
+
+/* ---------- new / edit ---------- */
+function blankSlot(date) { return { n: '', date: date || (S.draft && S.draft.date) || '', start: '', end: '', role: '', spots: 2, desc: '' }; }
+function newEvent() {
+  S.draft = { id: '', name: '', date: '', location: '', type: S.home.types[0] || 'Event', extra: '', group: false, groupTouched: false, multiDay: false, source: '', slots: [] };
+  renderEditor();
+}
+function editEvent() {
+  const e = S.ev;
+  S.draft = { id: e.id, name: e.name, date: e.date, location: e.location, type: e.type, extra: e.extra, group: e.group, groupTouched: true, multiDay: e.multiDay,
+    slots: e.slots.map(s => ({ n: s.n, date: s.date, start: s.start, end: s.end, role: s.role, spots: s.spots == null ? '' : s.spots, desc: s.desc, booked: s.people.length })) };
+  renderEditor();
+}
+function totalSpots() { return S.draft.slots.reduce((a, s) => a + (Number(s.spots) || 0), 0); }
+function renderEditor() {
+  const d = S.draft, h = S.home, isNew = !d.id;
+  if (!d.groupTouched) d.group = totalSpots() >= 30;
+  const sources = `<option value="">Start from scratch</option>
+      ${h.templates.length ? `<optgroup label="Templates">${h.templates.map(t => `<option value="T:${esc(t)}" ${d.source === 'T:' + t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</optgroup>` : ''}
+      ${h.pastEvents.length ? `<optgroup label="Copy an earlier event">${h.pastEvents.map(e => `<option value="E:${esc(e.id)}" ${d.source === 'E:' + e.id ? 'selected' : ''}>${esc(e.label)}</option>`).join('')}</optgroup>` : ''}`;
+  const slotRows = d.slots.map((s, i) => `
+    <div class="slotedit">
+      <label style="margin-top:2px">Job</label><input data-i="${i}" data-f="role" value="${esc(s.role)}" placeholder="e.g. BBQ, Door, Canteen">
+      <div class="grid">
+        <div><label>Start</label><input type="time" data-i="${i}" data-f="start" value="${esc(s.start)}"></div>
+        <div><label>Finish</label><input type="time" data-i="${i}" data-f="end" value="${esc(s.end)}"></div>
+        <div><label>People</label><input type="number" min="1" inputmode="numeric" data-i="${i}" data-f="spots" value="${esc(s.spots)}"></div>
+      </div>
+      ${d.multiDay ? `<label>Day</label><input type="date" data-i="${i}" data-f="date" value="${esc(s.date)}">` : ''}
+      <div class="tools">${s.booked ? `<span class="small muted">${s.booked} booked</span>` : ''}<button class="link" onclick="dupSlot(${i})">Copy</button><button class="link danger" onclick="delSlot(${i})">Remove</button></div>
+    </div>`).join('');
+  $('app').innerHTML = `
+    <button class="link" onclick="${isNew ? 'renderHome()' : 'renderEvent()'}">← ${isNew ? 'Your events' : 'Back'}</button>
+    <div class="kicker" style="margin-top:8px">${isNew ? 'New event' : 'Edit event'}</div>
+    <h1>${isNew ? 'Set up your event' : esc(d.name)}</h1>
+
+    <h2>1. The basics</h2>
+    <label>Event name</label><input id="f_name" value="${esc(d.name)}" placeholder="e.g. Disco Fever">
+    <div class="row"><div><label>Date</label><input type="date" id="f_date" value="${esc(d.date)}"></div></div>
+    <label>Where</label><input id="f_location" value="${esc(d.location)}" placeholder="e.g. School undercover area">
+
+    ${isNew ? `<h2>2. Start from</h2>
+      <select id="f_source" onchange="pickSource(this.value)">${sources}</select>
+      <div class="hint">Pick a template or last year's event and the slots are filled in for you, moved to your new date.</div>` : ''}
+
+    <h2>${isNew ? '3. ' : ''}Slots</h2>
+    <p class="small muted">Each slot is a job at a time, and how many people you need.</p>
+    ${slotRows || '<div class="panel small">No slots yet.</div>'}
+    <div class="row">
+      <button class="ghost" onclick="addSlot()">+ Add a slot</button>
+      <button class="ghost" onclick="S.runOpen=!S.runOpen;renderEditor()">+ Add several shifts</button>
+    </div>
+    ${S.runOpen ? `<div class="panel" style="margin-top:10px">
+      <p class="small">Splits a block of time into shifts – e.g. BBQ 8am–2pm in 2-hour shifts makes 3 slots.</p>
+      <label>Job</label><input id="r_role" placeholder="e.g. BBQ">
+      <div class="slotedit" style="border:0;padding:0;background:none"><div class="grid">
+        <div><label>From</label><input type="time" id="r_from" value="09:00"></div>
+        <div><label>To</label><input type="time" id="r_to" value="12:00"></div>
+        <div><label>People</label><input type="number" id="r_spots" min="1" value="2"></div>
+      </div></div>
+      <label>Each shift</label><select id="r_len"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="90">1½ hours</option><option value="120">2 hours</option><option value="180">3 hours</option></select>
+      <button style="margin-top:12px" onclick="addRun()">Add shifts</button>
+    </div>` : ''}
+
+    <details ${d.extra || d.multiDay || d.type !== (h.types[0] || 'Event') ? 'open' : ''} style="margin-top:18px">
+      <summary>More options</summary>
+      <label>Type of event</label><select id="f_type">${h.types.map(t => `<option ${t === d.type ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
+      <div class="hint">${h.wwcTypes.length ? esc(h.wwcTypes.join(', ')) + ' sign-ups ask for a Working with Children card.' : ''}</div>
+      <label style="display:flex;gap:8px;align-items:center;font-family:Lato,sans-serif;font-weight:400"><input type="checkbox" style="width:auto" ${d.multiDay ? 'checked' : ''} onchange="S.draft.multiDay=this.checked;renderEditor()"> This event runs over more than one day</label>
+      <label style="display:flex;gap:8px;align-items:center;font-family:Lato,sans-serif;font-weight:400"><input type="checkbox" style="width:auto" id="f_group" ${d.group ? 'checked' : ''} onchange="S.draft.group=this.checked;S.draft.groupTouched=true"> Big event – send reminders and thank-yous as one group email</label>
+      <label>Extra questions for volunteers <span class="muted small">(optional)</span></label>
+      <textarea id="f_extra" placeholder="Can you bring a plate to share? [Yes|No]">${esc(d.extra)}</textarea>
+      <div class="hint">One per line. Add choices in [Yes|No]. Start with * to make it required.</div>
+    </details>
+  <div class="sticky"><div class="inner"><button class="big" onclick="save()">${isNew ? 'Publish sign-up form' : 'Save changes'}</button></div></div>`;
+  // keep the draft in step with typing (without re-rendering, so the keyboard stays put)
+  document.querySelectorAll('[data-f]').forEach(el => el.addEventListener('input', () => {
+    S.draft.slots[Number(el.dataset.i)][el.dataset.f] = el.value;
+    if (el.dataset.f === 'spots' && !S.draft.groupTouched && $('f_group')) { S.draft.group = totalSpots() >= 30; $('f_group').checked = S.draft.group; }
+  }));
+  ['name', 'date', 'location', 'type', 'extra'].forEach(f => { const el = $('f_' + f); if (el) el.addEventListener('input', () => { S.draft[f] = el.value; }); });
+}
+function readBasics() { ['name', 'date', 'location', 'type', 'extra'].forEach(f => { const el = $('f_' + f); if (el) S.draft[f] = el.value; }); }
+function addSlot() { readBasics(); const last = S.draft.slots[S.draft.slots.length - 1]; const s = blankSlot(S.draft.date); if (last) { s.start = last.end; s.spots = last.spots; s.date = last.date; } S.draft.slots.push(s); renderEditor(); }
+function dupSlot(i) { readBasics(); const c = Object.assign({}, S.draft.slots[i], { n: '', booked: 0 }); S.draft.slots.splice(i + 1, 0, c); renderEditor(); }
+function delSlot(i) {
+  readBasics();
+  const s = S.draft.slots[i];
+  if (s.booked) { toast(`${s.booked} ${s.booked === 1 ? 'person is' : 'people are'} booked on this slot. Remove them from the event page first.`, true); return; }
+  S.draft.slots.splice(i, 1); renderEditor();
+}
+function addRun() {
+  readBasics();
+  const role = $('r_role').value.trim(), from = $('r_from').value, to = $('r_to').value, len = Number($('r_len').value), spots = $('r_spots').value;
+  if (!role || !from || !to) { toast('Fill in the job and the times.', true); return; }
+  const m = t => { const [h, mm] = t.split(':').map(Number); return h * 60 + mm; }, f = x => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');
+  let a = m(from); const b = m(to);
+  if (b <= a) { toast('The finish time needs to be after the start.', true); return; }
+  for (; a < b; a += len) S.draft.slots.push({ n: '', date: S.draft.date, start: f(a), end: f(Math.min(a + len, b)), role, spots, desc: '' });
+  S.runOpen = false; renderEditor(); toast('Shifts added.');
+}
+async function pickSource(v) {
+  readBasics();
+  S.draft.source = v;
+  if (!v) return;
+  if (!S.draft.date) { toast('Choose the date first, then pick what to start from.', true); S.draft.source = ''; renderEditor(); return; }
+  const booked = S.draft.slots.some(s => s.role);
+  const r = await run('Copying slots…', 'cpPreviewSlots', v, S.draft.date);
+  S.draft.slots = r.slots.map(s => Object.assign(s, { n: '' }));
+  if (r.extra && !S.draft.extra) S.draft.extra = r.extra;
+  renderEditor();
+  toast(`${r.slots.length} slots copied${booked ? ' (replacing what was there)' : ''} – change anything you like.`);
+}
+async function save() {
+  readBasics();
+  const d = S.draft;
+  if (!d.name.trim()) { toast('Give the event a name.', true); return; }
+  if (!d.date) { toast('Choose the date.', true); return; }
+  if (!d.multiDay) d.slots.forEach(s => { s.date = d.date; });
+  const isNew = !d.id;
+  S.ev = await run(isNew ? 'Publishing your sign-up form…' : 'Saving…', 'cpSaveEvent', {
+    id: d.id, name: d.name, date: d.date, location: d.location, type: d.type, extra: d.extra, group: d.group,
+    slots: d.slots.map(s => ({ n: s.n, date: s.date, start: s.start, end: s.end, role: s.role, spots: s.spots, desc: s.desc })),
+  });
+  S.draft = null; S.runOpen = false;
+  renderEvent(); window.scrollTo(0, 0);
+  toast(isNew ? 'Your sign-up form is live. Copy the link or the message to share it.' : 'Saved – the sign-up form is updated too.');
+}
+
+loadHome();
+</script>
+</body>
+</html>

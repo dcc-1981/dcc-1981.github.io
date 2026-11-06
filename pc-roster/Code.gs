@@ -25,6 +25,7 @@ const SH = {
   VOLUNTEERS: 'Volunteers',
   STATS: 'Stats',
   SETTINGS: 'Settings',
+  COORDS: 'Coordinators',
 };
 
 const HEADERS = {
@@ -34,10 +35,11 @@ const HEADERS = {
   [SH.TEMPLATES]: ['Template', 'Day offset', 'Start', 'End', 'Role / task', 'Spots', 'Description', 'Extra questions'],
   [SH.SIGNUPS]: ['Timestamp', 'Event ID', 'Event name', 'Slot #', 'Role / task', 'Slot date', 'Start', 'End',
     'Name', 'Email', 'Phone', 'Child / class', 'WWC number', 'WWC expiry', 'Status', 'Scheduled hours',
-    'Actual hours', 'Attended', 'Reminder', 'Thank-you', 'Answers / notes'],
+    'Actual hours', 'Attended', 'Reminder', 'Thank-you', 'Answers / notes', 'Cancelled on', 'Ref', 'Manage token'],
   [SH.VOLUNTEERS]: ['Email', 'Name', 'Phone', 'Child / class', 'WWC number', 'WWC expiry', 'First helped',
     'Last helped', 'Events', 'Shifts', 'Total hours'],
   [SH.SETTINGS]: ['Setting', 'Value', 'Help'],
+  [SH.COORDS]: ['Name', 'Email', 'Active', 'Page link', 'Welcome email', 'Key'],
 };
 
 // Wembley PS P&C Brand Identity Guide v1.1 (Oct 2026). The guide wins if these ever differ.
@@ -61,6 +63,9 @@ const BRAND = {
 
 // Earlier default wording, replaced by Setup / repair only if nobody has edited it.
 const RETIRED_DEFAULTS = {
+  'Confirmation body': ['Hi {FirstName},\n\nThanks for signing up to help at {EventName} ({EventDate}, {Location}). Here are your slots:\n{Shifts}\n\nIf you can no longer make it, just reply to this email and we\'ll sort it out.\n\nThank you!\n{SenderName}\n{PCName}'],
+  'Reminder body': ['Hi {FirstName},\n\nJust a friendly reminder that you\'re helping at {EventName} on {EventDate} at {Location}:\n{Shifts}\n\nIf anything has changed, please reply to let us know.\n\nSee you there!\n{SenderName}\n{PCName}'],
+  'Reminder emails': ['Draft'],
   'Thank-you body': ['Hi {FirstName},\n\nThank you so much for volunteering at {EventName} on {EventDate}. You gave us {Hours}, helping with:\n{Shifts}\n\nEvents like this only happen because families like yours pitch in, and every dollar raised goes back into our school.\n\nWith thanks,\n{SenderName}\n{PCName}'],
   'Group thank-you body': ['Hi everyone,\n\nThank you to all {VolunteerCount} volunteers who helped at {EventName} on {EventDate}. Between you, you gave about {TotalHours} hours across {ShiftCount} shifts.\n\nEvents like this only happen because families like yours pitch in, and every dollar raised goes back into our school.\n\nWith thanks,\n{SenderName}\n{PCName}'],
 };
@@ -96,16 +101,20 @@ const DEFAULT_SETTINGS = [
   ['WWC required for types', 'Canteen', 'Event types whose forms ask for a WWC card (comma-separated). Other events never ask.'],
   ['WWC warning days', '60', 'Warn this many days before a WWC card on file expires.'],
   ['Send sign-up confirmations', 'Yes', 'Yes = each volunteer gets an automatic email listing their slots.'],
-  ['Notify coordinator of each sign-up', 'No', 'Yes = the event coordinator gets an email for every sign-up.'],
-  ['Reminder emails', 'Draft', 'Off, Draft (saved in Gmail Drafts for you to check and send) or Send.'],
+  ['Notify coordinator of each sign-up', 'No', 'Yes = the event coordinator gets an email for every sign-up. (They get a daily update anyway – see Coordinator updates.)'],
+  ['Coordinator page address', '', 'The Web app URL from Apps Script › Deploy (ends in /exec). Needed for coordinator links and volunteers\' cancel links. See README.'],
+  ['Coordinator updates', 'Yes', 'Yes = each coordinator gets one short email a day, only when something changed (new sign-ups, cancellations) or spots are still open close to the day.'],
+  ['Nudge days before', '5', 'If spots are still open this many days before an event, the coordinator\'s update includes a ready-to-share message.'],
+  ['Share message', 'Can you help at {EventName}? We\'re looking for volunteers on {EventDate} at {Location}. Choose a time that suits you here: {FormLink}\n\nEven one shift makes a real difference – thank you.', 'The message coordinators copy into WhatsApp or the newsletter. Placeholders: {EventName} {EventDate} {Location} {FormLink} {PCName}'],
+  ['Reminder emails', 'Send', 'Send (automatic, like other sign-up sites), Draft (saved in Gmail Drafts for you to check and send) or Off.'],
   ['Reminder days before', '2', 'How many days before a shift the reminder is prepared.'],
   ['Auto-draft thank-yous', 'Yes', 'Yes = thank-you drafts are created automatically after each event. No = only from the menu.'],
   ['Thank-you days after event', '1', 'Gives coordinators time to fix hours and attendance before drafts are made.'],
   ['Form intro', 'Thanks for offering to help. Tick every slot you can do – full slots drop off the list automatically, and you\'ll get an email confirming your slots. No experience needed, we\'ll show you the ropes.', 'Shown at the top of every sign-up form.'],
   ['Confirmation subject', 'You\'re on the roster for {EventName}', 'Placeholders: {FirstName} {Name} {EventName} {EventDate} {Location} {Shifts} {Hours} {Coordinator} {CoordinatorEmail} {SenderName} {PCName}'],
-  ['Confirmation body', 'Hi {FirstName},\n\nThanks for signing up to help at {EventName} ({EventDate}, {Location}). Here are your slots:\n{Shifts}\n\nIf you can no longer make it, just reply to this email and we\'ll sort it out.\n\nThank you!\n{SenderName}\n{PCName}', ''],
+  ['Confirmation body', 'Hi {FirstName},\n\nThanks for signing up to help at {EventName} ({EventDate}, {Location}). Here are your slots:\n{Shifts}\n\n{ManageLine}\n\nThank you!\n{SenderName}\n{PCName}', '{ManageLine} becomes a link volunteers can use to cancel their own spot (or "reply to this email" if the coordinator page isn\'t set up).'],
   ['Reminder subject', 'Reminder: {EventName} on {EventDate}', ''],
-  ['Reminder body', 'Hi {FirstName},\n\nJust a friendly reminder that you\'re helping at {EventName} on {EventDate} at {Location}:\n{Shifts}\n\nIf anything has changed, please reply to let us know.\n\nSee you there!\n{SenderName}\n{PCName}', ''],
+  ['Reminder body', 'Hi {FirstName},\n\nJust a friendly reminder that you\'re helping at {EventName} on {EventDate} at {Location}:\n{Shifts}\n\n{ManageLine}\n\nSee you there!\n{SenderName}\n{PCName}', ''],
   ['Group emails', 'No', 'Yes = reminders and thank-yous go as one BCC email (one thank-you per event, one reminder per session) instead of one per person. Set "Group emails" on the Events tab to override for one event. Sign-up confirmations are always individual.'],
   ['Group email size limit', '450', 'Most people per BCC email. Bigger lists are split into several drafts (Gmail allows about 500 per message).'],
   ['Group reminder subject', 'Reminder: {EventName}, {SessionTime} on {EventDate}', 'Group placeholders: {EventName} {EventDate} {Location} {SessionTime} {Shifts} {VolunteerCount} {Coordinator} {CoordinatorEmail} {SenderName} {PCName}'],
@@ -130,6 +139,8 @@ function onOpen() {
     .addSeparator()
     .addItem('Finish event & draft thank-yous (selected event)', 'menuCloseEvent')
     .addItem('Save selected event as a template…', 'menuSaveTemplate')
+    .addSeparator()
+    .addItem('Coordinator links & welcome emails', 'menuCoordinatorLinks')
     .addSeparator()
     .addItem('Refresh counts, forms & stats', 'menuRefreshAll')
     .addItem('Run daily checks now', 'dailyRosterJob')
@@ -210,8 +221,9 @@ function menuRefreshAll() {
 /* ============================== Setup ============================== */
 
 function setupRoster() {
+  requireUi_();
   const ss = ss_();
-  const order = [SH.EVENTS, SH.SLOTS, SH.SIGNUPS, SH.VOLUNTEERS, SH.TEMPLATES, SH.STATS, SH.SETTINGS];
+  const order = [SH.EVENTS, SH.SLOTS, SH.SIGNUPS, SH.VOLUNTEERS, SH.COORDS, SH.TEMPLATES, SH.STATS, SH.SETTINGS];
   order.forEach((name, i) => {
     let sh = ss.getSheetByName(name);
     if (!sh) sh = ss.insertSheet(name, i);
@@ -277,6 +289,7 @@ const TAB_COLOURS = {
   [SH.TEMPLATES]: BRAND.paleBlue,
   [SH.STATS]: BRAND.navy,
   [SH.SETTINGS]: BRAND.midGrey,
+  [SH.COORDS]: BRAND.deepNavy,
 };
 
 /** Brand styling for a data tab: Lato body, navy Nunito header row, Panel Tint banding. */
@@ -328,6 +341,12 @@ function formatSheets_() {
   setColumnFormat_(su, 'WWC number', '@');
   setValidationList_(su, 'Status', SIGNUP_STATUSES);
   setValidationList_(su, 'Attended', ['Yes', 'No']);
+  setColumnFormat_(su, 'Cancelled on', 'd mmm yyyy h:mm am/pm');
+  hideColumns_(su, ['Ref', 'Manage token']);
+
+  const co = sheet_(SH.COORDS);
+  setValidationList_(co, 'Active', ['Yes', 'No']);
+  hideColumns_(co, ['Key']);
 
   const vo = sheet_(SH.VOLUNTEERS);
   setColumnFormat_(vo, 'Phone', '@');
@@ -406,6 +425,7 @@ function menuStopJobs() {
 
 /** Data for the New event / Add shifts dialogs. */
 function getDialogData() {
+  requireUi_();
   const s = settings_();
   const evs = events_().sort((a, b) => (b.date || 0) - (a.date || 0));
   return {
@@ -418,6 +438,7 @@ function getDialogData() {
 
 /** Called from the New event dialog. */
 function createEventFromDialog(d) {
+  requireUi_();
   if (!d.name || !d.date || !d.type) throw new Error('Event name, type and date are required.');
   const date = keyToDate_(d.date);
   const id = nextEventId_();
@@ -463,6 +484,7 @@ function createEventFromDialog(d) {
 
 /** Called from the Add shifts dialog: splits a block of time into shifts. */
 function addShiftsFromDialog(d) {
+  requireUi_();
   const ev = getEvent_(d.eventId);
   if (!ev) throw new Error('Pick an event.');
   const from = parseTime_(d.from), to = parseTime_(d.to);
@@ -851,12 +873,14 @@ function processSignup_(ev, ans, timestamp) {
   const counts = activeCounts_(ev.id);
 
   const already = {};
+  let token = '';
   getTable_(SH.SIGNUPS).rows.forEach(r => {
-    if (String(r['Event ID']).toUpperCase() === ev.id.toUpperCase() &&
-        String(r['Email']).trim().toLowerCase() === email && ACTIVE.indexOf(String(r['Status'])) >= 0) {
-      already[Number(r['Slot #'])] = true;
-    }
+    if (String(r['Event ID']).toUpperCase() !== ev.id.toUpperCase() || !email) return;
+    if (String(r['Email']).trim().toLowerCase() !== email) return;
+    if (!token && r['Manage token']) token = String(r['Manage token']);
+    if (ACTIVE.indexOf(String(r['Status'])) >= 0) already[Number(r['Slot #'])] = true;
   });
+  if (!token) token = newToken_();
 
   const vol = getVolunteer_(email);
   const needsWwc = wwcRequired_(ev, st);
@@ -883,6 +907,7 @@ function processSignup_(ev, ans, timestamp) {
       'Name': name, 'Email': email, 'Phone': phone, 'Child / class': child,
       'WWC number': needsWwc ? wwcNum : '', 'WWC expiry': needsWwc && wwcExp ? wwcExp : '',
       'Status': status, 'Scheduled hours': hrs, 'Answers / notes': notes.join(' | '),
+      'Ref': newRef_(), 'Manage token': token,
     });
     results.push({ s, status });
   });
@@ -891,13 +916,14 @@ function processSignup_(ev, ans, timestamp) {
   upsertVolunteer_({ email, name, phone, child, wwcNum: needsWwc ? String(ans[Q.WWC_NUM] || '').trim() : '', wwcExp: needsWwc ? toDate_(ans[Q.WWC_EXP]) : null });
   refreshEventForm_(ev);
 
-  if (!email || !results.length) return;
+  if (!email || !results.length) return results;
 
   // Confirmation to the volunteer.
   if (isYes_(st['Send sign-up confirmations'])) {
     const shifts = results.map(r => Object.assign({}, r.s, { note: statusNote_(r.status) }));
     const vars = templateVars_(ev, name, shifts.map(shiftText_),
       sumHours_(results.filter(r => ACTIVE.indexOf(r.status) >= 0).map(r => hoursBetween_(r.s.start, r.s.end))), st);
+    vars.ManageLine = manageLine_(token);
     const m = composeEmail_('You\'re on the roster', st['Confirmation subject'], st['Confirmation body'], vars, shifts, ev, st);
     MailApp.sendEmail(clean_({
       to: email, subject: m.subject, body: m.text, htmlBody: m.html, inlineImages: m.inlineImages,
@@ -919,9 +945,11 @@ function processSignup_(ev, ans, timestamp) {
         `\n\nRoster: ${ss_().getUrl()}`);
     }
   }
+  return results;
 }
 
 /* ============================== Volunteers ============================== */
+// (processSignup_ returns its per-slot results, used by the coordinator page.)
 
 function getVolunteer_(email) {
   if (!email) return null;
@@ -1045,7 +1073,7 @@ function dailyRosterJob() {
         return;
       }
       const k = r['Event ID'] + '|' + String(r['Email']).toLowerCase();
-      if (!groups[k]) groups[k] = { eventId: String(r['Event ID']), email: String(r['Email']).toLowerCase(), name: String(r['Name']), rows: [], shifts: [], hours: [] };
+      if (!groups[k]) groups[k] = { eventId: String(r['Event ID']), email: String(r['Email']).toLowerCase(), name: String(r['Name']), token: String(r['Manage token'] || ''), rows: [], shifts: [], hours: [] };
       groups[k].rows.push(i);
       groups[k].shifts.push({ date: d, role: String(r['Role / task']), start: parseTime_(t.disp[i]['Start']), end: parseTime_(t.disp[i]['End']) });
       groups[k].hours.push(Number(r['Scheduled hours']) || 0);
@@ -1057,6 +1085,7 @@ function dailyRosterJob() {
       if (!ev) return;
       const vars = templateVars_(ev, g.name, g.shifts.map(shiftText_), sumHours_(g.hours), st);
       vars.EventDate = fmtDate_(keyToDate_(target), 'EEEE d MMMM'); // the shift's day (matters for multi-day rosters like canteen weeks)
+      vars.ManageLine = manageLine_(g.token);
       const m = composeEmail_('Reminder', st['Reminder subject'], st['Reminder body'], vars, g.shifts, ev, st);
       const opts = clean_({ htmlBody: m.html, inlineImages: m.inlineImages, name: fromName_(st), replyTo: replyTo_(ev, st) });
       if (mode === 'send') GmailApp.sendEmail(g.email, m.subject, m.text, opts); else GmailApp.createDraft(g.email, m.subject, m.text, opts);
@@ -1124,6 +1153,11 @@ function dailyRosterJob() {
     if (k < today) digest.push(`WWC expired: ${r['Name']} (${r['Email']}) – expired ${fmtDate_(exp, 'd MMM yyyy')}.`);
     else if (k <= warn) digest.push(`WWC expiring: ${r['Name']} (${r['Email']}) – ${fmtDate_(exp, 'd MMM yyyy')}.`);
   });
+
+  // 5. Coordinator updates (one short email each, only when there's news).
+  if (isYes_(st['Coordinator updates'])) {
+    try { coordinatorUpdates_(st); } catch (e) { digest.push('Coordinator updates failed: ' + e.message); }
+  }
 
   refreshStats_();
 
@@ -1240,7 +1274,15 @@ function templateVars_(ev, name, lines, hours, st) {
     CoordinatorEmail: ev.coordinatorEmail || '',
     SenderName: ev.coordinator || st['Sender name'] || 'The P&C team',
     PCName: st['P&C name'] || '',
+    ManageLine: 'If you can no longer make it, just reply to this email and we\'ll sort it out.',
   };
+}
+
+/** The "cancel your spot" line, as a link when the coordinator page is deployed. */
+function manageLine_(token) {
+  const url = webAppUrl_();
+  if (!url || !token) return 'If you can no longer make it, just reply to this email and we\'ll sort it out.';
+  return `Can't make it after all? You can cancel your spot here: ${url}?x=${token}`;
 }
 
 function shiftLine_(s) {
@@ -1338,7 +1380,8 @@ function logoBlob_(st) {
 function emailHtml_(kicker, bodyTpl, vars, shifts, ev, st, hasLogo) {
   const B = BRAND;
   const TOKEN = '@@SHIFTS@@';
-  const para = t => `<p style="margin:0 0 16px;font-family:${B.bodyStack};font-size:15px;line-height:1.6;color:${B.nearBlack};">${esc_(t).replace(/\n/g, '<br>')}</p>`;
+  const link = u => `<a href="${u}" style="color:${B.navy};font-weight:700;">${/\?x=/.test(u) ? 'Cancel or check my spot' : u}</a>`;
+  const para = t => `<p style="margin:0 0 16px;font-family:${B.bodyStack};font-size:15px;line-height:1.6;color:${B.nearBlack};">${esc_(t).replace(/(https:\/\/[^\s<]+)/g, m => link(m)).replace(/\n/g, '<br>')}</p>`;
   const body = fill_(bodyTpl, Object.assign({}, vars, { Shifts: TOKEN })).split(/\n{2,}/).map(chunk => {
     if (chunk.indexOf(TOKEN) < 0) return chunk.trim() ? para(chunk.trim()) : '';
     const parts = chunk.split(TOKEN);
@@ -1396,6 +1439,526 @@ function shiftsHtml_(shifts) {
 
 function esc_(v) {
   return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+
+/* ============================== Coordinator page & volunteer self-service ==============================
+ * Published once by the Secretary as a Web app (Execute as: me · Who has access: Anyone).
+ * Coordinators open ?c=<their key>; volunteers open ?x=<their manage token> from their emails.
+ * Every server call re-checks the key or token. Coordinators only ever see their own events.
+ */
+
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (p.c) {
+    const c = coordinatorByKey_(p.c);
+    if (!c) return messagePage_('This link isn\'t active', 'Please ask the P&C Secretary for a new coordinator link.');
+    return bootPage_('Coordinator', { key: p.c, name: c.name }, 'P&C volunteer roster');
+  }
+  if (p.x && vmRows_(p.x).length) return bootPage_('Manage', { token: p.x }, 'Your volunteer spots');
+  return messagePage_('Link not found', 'This link may have expired. If you need to change your volunteer spot, just reply to your confirmation email.');
+}
+
+function bootPage_(file, boot, title) {
+  const t = HtmlService.createTemplateFromFile(file);
+  t.boot = JSON.stringify(boot).replace(/</g, '\\u003c');
+  return t.evaluate().setTitle(title).addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function messagePage_(title, text) {
+  const B = BRAND;
+  return HtmlService.createHtmlOutput(
+    `<div style="font-family:${B.bodyStack};color:${B.nearBlack};max-width:480px;margin:48px auto;padding:0 20px;">` +
+    `<div style="font-family:${B.headingStack};font-weight:800;font-size:22px;color:${B.deepNavy};margin-bottom:8px;">${esc_(title)}</div>` +
+    `<div style="font-size:15px;line-height:1.6;">${esc_(text)}</div></div>`)
+    .setTitle(title).addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/** The deployed web app address (Settings, or detected when running as the web app). */
+function webAppUrl_() {
+  const v = String(settings_()['Coordinator page address'] || '').trim();
+  if (/^https:\/\/script\.google\.com\/.+\/exec$/.test(v)) return v;
+  try { const u = ScriptApp.getService().getUrl(); if (u && /\/exec$/.test(u)) return u; } catch (e) { /* not deployed */ }
+  return '';
+}
+
+function newToken_() { return Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').slice(0, 8); }
+function newRef_() { return Utilities.getUuid().replace(/-/g, '').slice(0, 12); }
+
+/** Fills in Ref / Manage token for rows typed straight into the sheet. */
+function ensureRefs_() {
+  const t = getTable_(SH.SIGNUPS);
+  const tokens = {};
+  t.rows.forEach(r => { if (r['Manage token']) tokens[r['Event ID'] + '|' + String(r['Email']).toLowerCase()] = r['Manage token']; });
+  t.rows.forEach((r, i) => {
+    if (!r['Ref']) t.set(i, 'Ref', newRef_());
+    if (!r['Manage token']) {
+      const k = r['Event ID'] + '|' + String(r['Email']).toLowerCase();
+      tokens[k] = tokens[k] || newToken_();
+      t.set(i, 'Manage token', tokens[k]);
+    }
+  });
+}
+
+/* ---------- Coordinators ---------- */
+
+function coordinators_() {
+  const t = getTable_(SH.COORDS);
+  return t.rows.map((r, i) => ({
+    row: i, name: String(r['Name']).trim(), email: String(r['Email']).trim().toLowerCase(),
+    active: !/^no$/i.test(String(r['Active']).trim()), key: String(r['Key']).trim(),
+  })).filter(c => c.email);
+}
+
+function coordinatorByKey_(key) {
+  key = String(key || '');
+  if (key.length < 24) return null;
+  return coordinators_().filter(c => c.active && c.key === key)[0] || null;
+}
+
+function auth_(key) {
+  const c = coordinatorByKey_(key);
+  if (!c) throw new Error('This coordinator link is no longer active. Please ask the P&C Secretary for a new one.');
+  return c;
+}
+
+function ownEvent_(c, id) {
+  const ev = getEvent_(id);
+  if (!ev || ev.coordinatorEmail.toLowerCase() !== c.email) throw new Error('Can\'t find that event.');
+  return ev;
+}
+
+/** Menu: make a personal link for every coordinator, then offer welcome-email drafts. */
+function menuCoordinatorLinks() {
+  const ui = SpreadsheetApp.getUi();
+  const url = webAppUrl_();
+  if (!url) {
+    alert_('The coordinator page isn\'t published yet.\n\nIn Apps Script: Deploy › New deployment › Web app · Execute as: Me · Who has access: Anyone › Deploy. ' +
+      'Copy the Web app URL into Settings › Coordinator page address, then run this again. (Steps are in the setup guide.)');
+    return;
+  }
+  // Add anyone named as a coordinator on the Events tab.
+  const have = coordinators_().map(c => c.email);
+  const add = [];
+  events_().forEach(e => {
+    const em = e.coordinatorEmail.toLowerCase();
+    if (em && have.indexOf(em) < 0 && !add.some(a => a.Email === em)) add.push({ 'Name': e.coordinator || em, 'Email': em, 'Active': 'Yes' });
+  });
+  if (add.length) appendObjects_(SH.COORDS, add);
+
+  const t = getTable_(SH.COORDS);
+  let made = 0;
+  t.rows.forEach((r, i) => {
+    if (!String(r['Email']).trim()) return;
+    if (!r['Key']) { t.set(i, 'Key', newToken_()); made++; }
+    if (!String(r['Active']).trim()) t.set(i, 'Active', 'Yes');
+    t.set(i, 'Page link', `${url}?c=${t.rows[i]['Key']}`);
+  });
+
+  const unsent = t.rows.map((r, i) => i).filter(i => t.rows[i]['Email'] && !String(t.rows[i]['Welcome email']).trim() && !/^no$/i.test(String(t.rows[i]['Active'])));
+  let msg = `${made} new link(s) made. Links are in the Page link column on the Coordinators tab.`;
+  if (unsent.length && ui.alert('Coordinator links', `${msg}\n\nDraft a short welcome email (with their link) for the ${unsent.length} coordinator(s) who haven't had one?`, ui.ButtonSet.YES_NO) === ui.Button.YES) {
+    const st = settings_();
+    unsent.forEach(i => {
+      const r = t.rows[i];
+      const first = String(r['Name']).trim().split(/\s+/)[0] || 'there';
+      GmailApp.createDraft(String(r['Email']).trim(), 'Your link for organising P&C volunteers',
+        `Hi ${first},\n\nHere's your link for organising volunteers for P&C events:\n${r['Page link']}\n\n` +
+        'Bookmark it – there\'s nothing to install and no log-in. From there you can set up an event (or copy last year\'s), share the sign-up link and see who\'s coming. ' +
+        'Volunteers get their confirmations and reminders automatically, and can cancel their own spot if their plans change.\n\n' +
+        'Please keep the link to yourself, as it shows volunteers\' contact details. Any questions, just reply.\n\n' +
+        `Thanks for helping,\n${st['Sender name'] || 'The P&C team'}`, clean_({ name: fromName_(st) }));
+      t.set(i, 'Welcome email', 'Drafted ' + fmtDate_(new Date(), 'd MMM'));
+    });
+    alert_(`${unsent.length} welcome email(s) are in Gmail Drafts – check and send them.`);
+  } else {
+    alert_(msg);
+  }
+}
+
+/* ---------- Coordinator page: data ---------- */
+
+function hhmm_(mins) { return mins == null ? '' : String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0'); }
+
+function signupsFor_(eventId) {
+  const t = getTable_(SH.SIGNUPS);
+  return t.rows.map((r, i) => ({ r, i })).filter(x => String(x.r['Event ID']).toUpperCase() === eventId.toUpperCase());
+}
+
+function eventCard_(ev, today) {
+  const counts = activeCounts_(ev.id);
+  let spots = 0, filled = 0, unlimited = false;
+  const slots = slots_(ev);
+  slots.forEach(s => { filled += counts[s.n] || 0; if (s.spots == null) unlimited = true; else spots += s.spots; });
+  const last = slots.reduce((m, s) => (dateKey_(s.date) > m ? dateKey_(s.date) : m), dateKey_(ev.date));
+  return {
+    id: ev.id, name: ev.name, dateText: ev.date ? fmtDate_(ev.date, 'EEE d MMM yyyy') : '',
+    dateKey: dateKey_(ev.date), status: ev.status, filled, spots: unlimited ? null : spots,
+    past: !!last && last < today,
+  };
+}
+
+function shareText_(ev, st) {
+  return fill_(st['Share message'], {
+    EventName: ev.name, EventDate: ev.date ? fmtDate_(ev.date, 'EEEE d MMMM') : '', Location: ev.location || 'school',
+    FormLink: ev.formUrl || '', PCName: st['P&C name'] || '',
+  });
+}
+
+/** Everything the coordinator's home screen needs. */
+function cpLoad(key) {
+  const c = auth_(key);
+  const st = settings_();
+  const today = todayKey_();
+  const mine = events_().filter(e => e.coordinatorEmail.toLowerCase() === c.email)
+    .sort((a, b) => (a.date || 0) - (b.date || 0)).map(e => eventCard_(e, today));
+  const past = events_().filter(e => e.date).sort((a, b) => b.date - a.date).slice(0, 40)
+    .map(e => ({ id: e.id, label: `${e.name} (${fmtDate_(e.date, 'MMM yyyy')})` }));
+  const logo = logoBlob_(st);
+  return {
+    name: c.name, types: splitList_(st['Event types']), wwcTypes: splitList_(st['WWC required for types']),
+    events: mine, templates: templateNames_(), pastEvents: past,
+    logo: logo ? 'data:' + logo.getContentType() + ';base64,' + Utilities.base64Encode(logo.getBytes()) : '',
+    pcName: st['P&C name'],
+  };
+}
+
+/** One event in full: details, share message and the roster. */
+function cpEvent(key, id) {
+  const c = auth_(key);
+  ensureRefs_();
+  return eventDetail_(ownEvent_(c, id));
+}
+
+function eventDetail_(ev) {
+  const st = settings_();
+  const today = todayKey_();
+  const people = signupsFor_(ev.id);
+  const slots = slots_(ev).map(s => {
+    const here = people.filter(x => Number(x.r['Slot #']) === s.n && String(x.r['Status']) !== 'Cancelled').map(x => ({
+      ref: String(x.r['Ref']), name: String(x.r['Name']), email: String(x.r['Email']), phone: String(x.r['Phone']),
+      status: String(x.r['Status']), attended: String(x.r['Attended'] || ''),
+    }));
+    const active = here.filter(p => ACTIVE.indexOf(p.status) >= 0);
+    return {
+      n: s.n, date: dateKey_(s.date), dateText: fmtDate_(s.date, 'EEE d MMM'), start: hhmm_(s.start), end: hhmm_(s.end),
+      timeText: timeRange_(s), role: s.role, spots: s.spots, desc: s.desc,
+      people: active, waitlist: here.filter(p => p.status === 'Waitlist'),
+      open: s.spots == null ? null : Math.max(s.spots - active.length, 0),
+    };
+  });
+  const card = eventCard_(ev, today);
+  return {
+    id: ev.id, name: ev.name, type: ev.type, date: dateKey_(ev.date), dateText: card.dateText, location: ev.location,
+    status: ev.status, formUrl: ev.formUrl, share: shareText_(ev, st), extra: ev.extra,
+    group: groupEmails_(ev, st), past: card.past, filled: card.filled, spots: card.spots,
+    multiDay: slots.some(s => s.date !== dateKey_(ev.date)), slots,
+  };
+}
+
+/** Slots from a template or any earlier event, moved to the new date (no people copied). */
+function cpPreviewSlots(key, source, dateKey) {
+  auth_(key);
+  if (!dateKey) throw new Error('Choose the event date first.');
+  const base = keyToDate_(dateKey);
+  let list = [], extra = '';
+  if (String(source).indexOf('T:') === 0) {
+    const t = templateSlots_(String(source).slice(2));
+    list = t.slots; extra = t.extra;
+  } else if (String(source).indexOf('E:') === 0) {
+    const src = getEvent_(String(source).slice(2));
+    if (src) {
+      list = slots_(src).map(s => ({ offset: src.date ? daysBetween_(dateKey_(src.date), dateKey_(s.date)) : 0, start: s.start, end: s.end, role: s.role, spots: s.spots, desc: s.desc }));
+      extra = src.extra;
+    }
+  }
+  return {
+    extra,
+    slots: list.map(s => ({ date: dateKey_(addDays_(base, s.offset || 0)), start: hhmm_(s.start), end: hhmm_(s.end), role: s.role, spots: s.spots == null ? '' : s.spots, desc: s.desc || '' })),
+  };
+}
+
+/* ---------- Coordinator page: changes ---------- */
+
+/** Create or update an event and its slots, then publish its sign-up form. */
+function cpSaveEvent(key, d) {
+  const c = auth_(key);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const name = String(d.name || '').trim();
+    if (!name) throw new Error('Give the event a name.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.date || ''))) throw new Error('Choose the event date.');
+    const slots = (d.slots || []).filter(s => String(s.role || '').trim());
+    if (!slots.length) throw new Error('Add at least one slot (a job and a time).');
+    slots.forEach(s => {
+      const a = parseTime_(s.start), b = parseTime_(s.end);
+      if (a == null || b == null) throw new Error(`Add a start and finish time for "${s.role}".`);
+      if (s.spots !== '' && s.spots != null && !(Number(s.spots) >= 1)) throw new Error(`"${s.role}" needs at least 1 person (or leave it blank for no limit).`);
+    });
+    const st = settings_();
+    const type = splitList_(st['Event types']).indexOf(d.type) >= 0 ? d.type : (splitList_(st['Event types'])[0] || 'Event');
+    const fields = {
+      'Event name': name, 'Type': type, 'Date': keyToDate_(d.date), 'Location': String(d.location || '').trim(),
+      'Extra questions': String(d.extra || '').trim(), 'Group emails': d.group ? 'Yes' : 'No',
+    };
+    let id = d.id;
+    if (id) {
+      ownEvent_(c, id);
+      updateEvent_(id, fields);
+    } else {
+      id = nextEventId_();
+      appendObjects_(SH.EVENTS, [Object.assign({ 'Event ID': id, 'Coordinator': c.name, 'Coordinator email': c.email, 'Status': 'Draft' }, fields)]);
+    }
+    replaceSlots_(getEvent_(id), slots, d.date);
+    buildForm_(id);
+    return eventDetail_(getEvent_(id));
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Rewrites an event's slots, keeping slot numbers so existing sign-ups stay attached. */
+function replaceSlots_(ev, slots, eventDateKey) {
+  const existing = slots_(ev);
+  const counts = activeCounts_(ev.id);
+  const keep = {};
+  slots.forEach(s => { if (s.n) keep[Number(s.n)] = s; });
+  existing.forEach(s => {
+    const booked = counts[s.n] || 0;
+    if (!keep[s.n] && booked) throw new Error(`${booked} ${booked === 1 ? 'person is' : 'people are'} booked for "${s.role}" (${timeRange_(s)}). Remove them first, or keep that slot.`);
+    if (keep[s.n] && keep[s.n].spots !== '' && keep[s.n].spots != null && Number(keep[s.n].spots) < booked) {
+      throw new Error(`"${s.role}" already has ${booked} people – set at least ${booked} spots.`);
+    }
+  });
+  let max = existing.reduce((m, s) => Math.max(m, s.n || 0), 0);
+  deleteRowsWhere_(SH.SLOTS, r => String(r['Event ID']).trim().toUpperCase() === ev.id.toUpperCase());
+  appendObjects_(SH.SLOTS, slots.map(s => ({
+    'Event ID': ev.id, 'Slot #': s.n ? Number(s.n) : ++max,
+    'Date': keyToDate_(/^\d{4}-\d{2}-\d{2}$/.test(String(s.date || '')) ? s.date : eventDateKey),
+    'Start': fmtTime_(parseTime_(s.start), 'sheet'), 'End': fmtTime_(parseTime_(s.end), 'sheet'),
+    'Role / task': String(s.role).trim(), 'Spots': s.spots === '' || s.spots == null ? '' : Number(s.spots),
+    'Description': String(s.desc || '').trim(),
+  })));
+  syncSignupsToSlots_(getEvent_(ev.id));
+}
+
+/** Keeps booked people's role, date and times in step with edited slots. */
+function syncSignupsToSlots_(ev) {
+  const byN = {};
+  slots_(ev).forEach(s => { byN[s.n] = s; });
+  const t = getTable_(SH.SIGNUPS);
+  t.rows.forEach((r, i) => {
+    if (String(r['Event ID']).toUpperCase() !== ev.id.toUpperCase()) return;
+    const s = byN[Number(r['Slot #'])];
+    if (!s) return;
+    const start = s.start == null ? '' : fmtTime_(s.start, 'sheet'), end = s.end == null ? '' : fmtTime_(s.end, 'sheet');
+    if (String(r['Role / task']) !== s.role) t.set(i, 'Role / task', s.role);
+    if (dateKey_(toDate_(r['Slot date'])) !== dateKey_(s.date)) t.set(i, 'Slot date', s.date);
+    if (parseTime_(t.disp[i]['Start']) !== s.start) t.set(i, 'Start', start);
+    if (parseTime_(t.disp[i]['End']) !== s.end) t.set(i, 'End', end);
+    const h = hoursBetween_(s.start, s.end);
+    if (r['Scheduled hours'] !== h) t.set(i, 'Scheduled hours', h);
+  });
+}
+
+/** Coordinator adds someone (e.g. a walk-up or someone who messaged them). */
+function cpAddPerson(key, id, n, p) {
+  const c = auth_(key);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const ev = ownEvent_(c, id);
+    const name = String(p.name || '').trim();
+    if (!name) throw new Error('Add their name.');
+    const email = String(p.email || '').trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('That email address doesn\'t look right.');
+    const s = slots_(ev).filter(x => x.n === Number(n))[0];
+    if (!s) throw new Error('Can\'t find that slot.');
+    if (s.spots != null && (activeCounts_(ev.id)[s.n] || 0) >= s.spots) throw new Error('That slot is full. Add a spot first (Edit event), then add them.');
+    const ans = {};
+    ans[Q.NAME] = name; ans[Q.EMAIL] = email; ans[Q.PHONE] = String(p.phone || '').trim(); ans[Q.SLOTS] = `(#${s.n})`;
+    processSignup_(ev, ans, new Date());
+    ensureRefs_();
+    return eventDetail_(getEvent_(id));
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Coordinator takes someone off a slot. The spot reopens on the form. */
+function cpRemove(key, id, ref) {
+  const c = auth_(key);
+  const ev = ownEvent_(c, id);
+  cancelByRef_(ev, ref);
+  return eventDetail_(getEvent_(id));
+}
+
+function cpAttended(key, id, ref, came) {
+  const c = auth_(key);
+  const ev = ownEvent_(c, id);
+  const t = getTable_(SH.SIGNUPS);
+  const i = t.rows.findIndex(r => String(r['Ref']) === String(ref) && String(r['Event ID']).toUpperCase() === ev.id.toUpperCase());
+  if (i < 0) throw new Error('Can\'t find that person.');
+  t.set(i, 'Attended', came ? 'Yes' : 'No');
+  return eventDetail_(ev);
+}
+
+/** Move someone from the waitlist into a slot that now has room. */
+function cpPromote(key, id, ref) {
+  const c = auth_(key);
+  const ev = ownEvent_(c, id);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const t = getTable_(SH.SIGNUPS);
+    const i = t.rows.findIndex(r => String(r['Ref']) === String(ref) && String(r['Event ID']).toUpperCase() === ev.id.toUpperCase());
+    if (i < 0 || String(t.rows[i]['Status']) !== 'Waitlist') throw new Error('Can\'t find that person on the waitlist.');
+    const s = slots_(ev).filter(x => x.n === Number(t.rows[i]['Slot #']))[0];
+    if (s && s.spots != null && (activeCounts_(ev.id)[s.n] || 0) >= s.spots) throw new Error('That slot is still full.');
+    t.set(i, 'Status', 'Confirmed');
+    refreshEventForm_(ev);
+  } finally {
+    lock.releaseLock();
+  }
+  return eventDetail_(getEvent_(id));
+}
+
+function cpSetOpen(key, id, open) {
+  const c = auth_(key);
+  const ev = ownEvent_(c, id);
+  if (ev.status === 'Done') throw new Error('This event has finished.');
+  updateEvent_(ev.id, { 'Status': open ? 'Open' : 'Closed' });
+  const fresh = getEvent_(ev.id);
+  refreshEventForm_(fresh);
+  return eventDetail_(fresh);
+}
+
+function cancelByRef_(ev, ref) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const t = getTable_(SH.SIGNUPS);
+    const i = t.rows.findIndex(r => String(r['Ref']) === String(ref) && String(r['Event ID']).toUpperCase() === ev.id.toUpperCase());
+    if (i < 0) throw new Error('Can\'t find that booking.');
+    if (ACTIVE.indexOf(String(t.rows[i]['Status'])) < 0 && String(t.rows[i]['Status']) !== 'Waitlist') return t.rows[i];
+    t.set(i, 'Status', 'Cancelled');
+    t.set(i, 'Cancelled on', new Date());
+    refreshEventForm_(ev);
+    return t.rows[i];
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ---------- Volunteer self-service (?x=token) ---------- */
+
+function vmRows_(token) {
+  token = String(token || '');
+  if (token.length < 24) return [];
+  const t = getTable_(SH.SIGNUPS);
+  return t.rows.map((r, i) => ({ r, i, disp: t.disp[i] })).filter(x => String(x.r['Manage token']) === token);
+}
+
+function vmLoad(token) {
+  const rows = vmRows_(token);
+  if (!rows.length) throw new Error('This link has expired.');
+  const ev = getEvent_(String(rows[0].r['Event ID']));
+  const today = todayKey_();
+  const st = settings_();
+  const logo = logoBlob_(st);
+  return {
+    name: String(rows[0].r['Name']).split(/\s+/)[0], eventName: ev ? ev.name : String(rows[0].r['Event name']),
+    location: ev ? ev.location : '', formUrl: ev && ev.status === 'Open' ? ev.formUrl : '',
+    coordinator: ev ? ev.coordinator : '', coordinatorEmail: ev ? (ev.coordinatorEmail || st['Public email']) : st['Public email'],
+    logo: logo ? 'data:' + logo.getContentType() + ';base64,' + Utilities.base64Encode(logo.getBytes()) : '',
+    pcName: st['P&C name'],
+    slots: rows.map(x => {
+      const d = toDate_(x.r['Slot date']);
+      const s = { date: d, role: String(x.r['Role / task']), start: parseTime_(x.disp['Start']), end: parseTime_(x.disp['End']) };
+      return {
+        ref: String(x.r['Ref']), dateText: d ? fmtDate_(d, 'EEE d MMM') : '', role: s.role, timeText: timeRange_(s),
+        status: String(x.r['Status']), canCancel: (ACTIVE.indexOf(String(x.r['Status'])) >= 0 || String(x.r['Status']) === 'Waitlist') && !!d && dateKey_(d) >= today,
+        past: !!d && dateKey_(d) < today,
+      };
+    }),
+  };
+}
+
+function vmCancel(token, ref) {
+  ensureRefs_();
+  const rows = vmRows_(token);
+  const x = rows.filter(y => String(y.r['Ref']) === String(ref))[0];
+  if (!x) throw new Error('This link has expired.');
+  const d = toDate_(x.r['Slot date']);
+  if (d && dateKey_(d) < todayKey_()) throw new Error('That shift has already happened.');
+  const ev = getEvent_(String(x.r['Event ID']));
+  if (!ev) throw new Error('This event no longer exists.');
+  const wasActive = ACTIVE.indexOf(String(x.r['Status'])) >= 0;
+  cancelByRef_(ev, ref);
+  if (wasActive) {
+    // Tell the coordinator straight away – this is the one thing they may need to act on.
+    const st = settings_();
+    const to = ev.coordinatorEmail || st['Admin email'];
+    const s = { date: d, role: String(x.r['Role / task']), start: parseTime_(x.disp['Start']), end: parseTime_(x.disp['End']) };
+    const waiting = signupsFor_(ev.id).filter(y => Number(y.r['Slot #']) === Number(x.r['Slot #']) && String(y.r['Status']) === 'Waitlist').map(y => String(y.r['Name']));
+    const c = coordinators_().filter(k => k.email === String(ev.coordinatorEmail).toLowerCase())[0];
+    const url = webAppUrl_();
+    if (to) {
+      MailApp.sendEmail(clean_({
+        to, name: fromName_(st),
+        subject: `${x.r['Name']} can no longer help at ${ev.name}`,
+        body: `${x.r['Name']} has cancelled their spot:\n${shiftLine_(s)}\n\nThe spot is open again on the sign-up form.` +
+          (waiting.length ? `\n\nOn the waitlist for this slot: ${waiting.join(', ')}. Add one of them from your page if you'd like.` : '') +
+          (c && url ? `\n\nYour page: ${url}?c=${c.key}` : ''),
+      }));
+    }
+  }
+  return vmLoad(token);
+}
+
+/* ---------- Coordinator daily updates ---------- */
+
+function coordinatorUpdates_(st) {
+  const today = todayKey_();
+  const since = new Date(Date.now() - 24 * 3600 * 1000);
+  const nudgeDays = Number(st['Nudge days before']) || 5;
+  const url = webAppUrl_();
+  const byCoord = {};
+  events_().forEach(ev => {
+    if (ev.status === 'Done' || !ev.coordinatorEmail || !ev.date) return;
+    const slots = slots_(ev);
+    const last = slots.reduce((m, s) => (dateKey_(s.date) > m ? dateKey_(s.date) : m), dateKey_(ev.date));
+    if (last < today) return;
+    const people = signupsFor_(ev.id);
+    const fresh = people.filter(x => x.r['Timestamp'] instanceof Date && x.r['Timestamp'] >= since && String(x.r['Status']) !== 'Cancelled');
+    const gone = people.filter(x => x.r['Cancelled on'] instanceof Date && x.r['Cancelled on'] >= since);
+    const counts = activeCounts_(ev.id);
+    const open = slots.filter(s => s.spots != null && (counts[s.n] || 0) < s.spots && dateKey_(s.date) >= today)
+      .map(s => ({ s, left: s.spots - (counts[s.n] || 0) }));
+    const daysTo = daysBetween_(today, dateKey_(ev.date));
+    const nudge = open.length && daysTo === nudgeDays;
+    if (!fresh.length && !gone.length && !nudge) return;
+    const lines = [`${ev.name} – ${fmtDate_(ev.date, 'EEE d MMM')}`];
+    if (fresh.length) lines.push('New: ' + fresh.map(x => `${x.r['Name']} (${x.r['Role / task']}${x.r['Status'] === 'Waitlist' ? ', waitlist' : ''})`).join(', '));
+    if (gone.length) lines.push('Cancelled: ' + gone.map(x => `${x.r['Name']} (${x.r['Role / task']})`).join(', '));
+    lines.push(open.length ? 'Still open: ' + open.map(o => `${o.s.role} ${timeRange_(o.s)} – ${o.left}`).join('; ') : 'Every slot is filled.');
+    if (nudge) lines.push(`\nStill need a few more? Here's a message you can paste into WhatsApp or the newsletter:\n\n${shareText_(ev, st)}`);
+    const k = ev.coordinatorEmail.toLowerCase();
+    (byCoord[k] = byCoord[k] || { name: ev.coordinator, events: [] }).events.push(lines.join('\n'));
+  });
+  const coords = coordinators_();
+  Object.keys(byCoord).forEach(email => {
+    const g = byCoord[email];
+    const c = coords.filter(x => x.email === email && x.active)[0];
+    const first = String(g.name || '').split(/\s+/)[0] || 'there';
+    MailApp.sendEmail(clean_({
+      to: email, name: fromName_(st),
+      subject: g.events.length === 1 ? `Volunteer update: ${g.events[0].split(' – ')[0]}` : `Volunteer update: ${g.events.length} events`,
+      body: `Hi ${first},\n\nHere's what's changed since yesterday.\n\n${g.events.join('\n\n')}` +
+        (c && url ? `\n\nSee everyone and make changes: ${url}?c=${c.key}` : '') + '\n\nThanks for organising.',
+    }));
+  });
 }
 
 /* ============================== Pure helpers (unit-tested) ============================== */
@@ -1662,6 +2225,11 @@ function selectedEventId_() {
   const id = resp.getResponseText().trim().toUpperCase();
   if (!getEvent_(id)) { alert_(`Couldn't find ${id} on the Events tab.`); return null; }
   return id;
+}
+
+/** Sheet-only actions must not be callable from the public web pages. */
+function requireUi_() {
+  if (!ui_()) throw new Error('This action is only available from the spreadsheet.');
 }
 
 function ui_() { try { return SpreadsheetApp.getUi(); } catch (e) { return null; } }

@@ -1,11 +1,14 @@
 # P&C Volunteer Roster (Google Sheet + Google Forms)
 
-A volunteer roster that runs inside one Google Sheet. Coordinators build an event's slots in the sheet (or copy them from a template or a past event), and the script creates a Google Form for families to sign up. After the event it drafts thank-you emails and adds the hours to the P&C's stats.
+A volunteer roster that runs from one Google Sheet. Event coordinators use a simple page on their phone (no spreadsheet, no log-in): set up an event or copy last year's, share the link, and see who's coming. Families sign up on a Google Form and can cancel their own spot. Confirmations and reminders send themselves, thank-you notes are drafted for review, and the hours go into the P&C's stats.
 
 ## What it does
 
 | | |
 |---|---|
+| **Coordinator page** | Each coordinator gets a personal link. From it they create events (three steps, or copy last year's), publish the sign-up form, copy a ready-made message for WhatsApp or the newsletter, see who's in each slot, add walk-ups, remove people, move people off the waitlist, and close sign-ups. They only see their own events. |
+| **Volunteer self-service** | Confirmations and reminders include a "Cancel or check my spot" link. Cancelling reopens the spot on the form and tells the coordinator straight away. |
+| **Coordinator updates** | One short email a day, only when something has changed (new sign-ups, cancellations). If spots are still open a few days before the event, the email includes a message ready to share. |
 | **Sign-ups** | One Google Form per event, built from that event's slots. Each slot shows how many spots are left. Full slots disappear from the form, and the form closes itself when everything is full. |
 | **Templates** | Start a new event from a saved template (sausage sizzle, disco, canteen week…) or copy any past event. Slot dates move to the new date automatically. Any event can be saved as a template. |
 | **Quick shifts** | "Add shifts" turns a block of time into shifts, e.g. BBQ 8am–2pm in 2-hour shifts with 3 people each. |
@@ -28,12 +31,20 @@ New to this? Ask the Secretary for the illustrated setup guide (PDF, kept in the
    - Replace everything in `Code.gs` with the contents of [`Code.gs`](Code.gs).
    - Click **+ › HTML**, name it `NewEvent` (without `.html`), and paste in [`NewEvent.html`](NewEvent.html).
    - Click **+ › HTML**, name it `AddShifts`, and paste in [`AddShifts.html`](AddShifts.html).
+   - Click **+ › HTML**, name it `Coordinator`, and paste in [`Coordinator.html`](Coordinator.html).
+   - Click **+ › HTML**, name it `Manage`, and paste in [`Manage.html`](Manage.html).
    - Click **Project Settings** (cog icon), tick **Show "appsscript.json" manifest file**, then go back to the editor and replace `appsscript.json` with [`appsscript.json`](appsscript.json).
    - Click **Save**.
 4. Go back to the sheet and reload it. A **P&C Roster** menu appears.
 5. Click **P&C Roster › Setup / repair**. Google will ask you to authorise the script. It needs access to the sheet, Forms (to build sign-up forms), Gmail (to save drafts and send confirmations) and triggers (for the daily check). Click through "Advanced › Go to project" if Google warns that the app isn't verified. That's normal for your own scripts.
 6. Check the **Settings** tab: P&C name, sender name, admin email and email wording. Add the **Facebook page link** so it appears in the email and form footers.
-7. Make the branded master form (once). See *P&C branding* below.
+7. **Publish the coordinator page.** In Apps Script click **Deploy › New deployment**. Click the cog next to *Select type* and choose **Web app**. Set *Execute as* to **Me** and *Who has access* to **Anyone**, then click **Deploy** (authorise if asked). Copy the **Web app URL** (it ends in `/exec`) into **Settings › Coordinator page address**.
+   - "Anyone" is needed so that coordinators and families can open their links without logging in. Each link carries a long secret code, so only people you've given a link to can see anything.
+   - If *Anyone* isn't offered, your Google Workspace admin has blocked sharing outside wembleypc.org.au. Ask them to allow it for Apps Script web apps.
+8. **Give coordinators their links.** Add each coordinator's name and email on the **Coordinators** tab, then click **P&C Roster › Coordinator links & welcome emails**. It makes their personal links and drafts a short welcome email to each person for you to send. To stop a link working, set *Active* to **No**.
+9. Make the branded master form (once). See *P&C branding* below.
+
+**When the code is updated:** paste the new files in as before, then **Deploy › Manage deployments**, click the pencil, set *Version* to **New version** and click **Deploy**. The page address stays the same, so coordinators' links keep working. Then run **Setup / repair**.
 
 > Run Setup from the account that should own the drafts and send the emails, ideally a shared P&C account rather than a personal one. The daily check and the thank-you drafts run as that account.
 
@@ -42,16 +53,24 @@ New to this? Ask the Secretary for the illustrated setup guide (PDF, kept in the
 | Person | What they do | Code? |
 |---|---|---|
 | **Secretary (you)** | The one-time setup, plus pasting in any code updates | Yes, once |
-| **Event coordinators** | Create events, edit slots and manage sign-ups from the P&C Roster menu | **No.** They just need **Editor** access to the Sheet. |
-| **Families** | Fill in the sign-up form | No |
+| **Event coordinators** | Use their **coordinator page link**: set up events, share the link, see who's coming, add or remove people | **No.** They don't need the Sheet or a Google log-in. |
+| **Families** | Fill in the sign-up form, and cancel their own spot from the link in their email | No |
 
-- The first time a coordinator uses the menu, Google shows them the "hasn't verified this app" screen once (Advanced, then Go to P&C Roster). Warn them it's coming.
-- Confirmations, reminders and the automatic thank-yous always come from the account that ran Setup. If a coordinator uses **Finish event & draft thank-yous** themselves, the drafts land in *their* Gmail.
-- Forms a coordinator creates are saved in their Google Drive.
+- Everything from the coordinator page runs as the Secretary's account. All emails come from it, forms are saved in its Drive, and thank-you drafts land in its Gmail for you to send.
+- Coordinators only see events where they're the coordinator. The Sheet, the volunteer register and the stats stay with you.
+- The page shows a small Google banner saying it was "created by another user". That's normal for these pages.
+- You can still do everything from the Sheet's **P&C Roster** menu yourself.
 - Only the Setup account runs the automatic jobs. If someone else runs **Setup / repair**, it checks the tabs but won't start a second set of jobs, because that would send duplicate emails.
 - **Handover to a new Secretary:** the outgoing Secretary runs **P&C Roster › Stop automatic jobs (handover)**. The new Secretary then runs **Setup / repair** straight away from their own account.
 
-## Running an event
+## Running an event (coordinators, on their page)
+
+1. Tap **+ New event**. Enter the name, date and place, pick a template or an earlier event under *Start from*, and adjust the slots. Each slot is a job, a start and finish time, and how many people.
+2. Tap **Publish sign-up form**, then **Copy message to share** and paste it into WhatsApp or the newsletter.
+3. Open the event any time to see who's in each slot. Use **+ Add someone**, **Remove**, **Add to slot** (for the waitlist) or **Close sign-ups**.
+4. After the event, tap **Didn't come?** for anyone who couldn't make it. Thank-you notes are prepared automatically for the Secretary to send.
+
+## Running an event (from the Sheet)
 
 1. **P&C Roster › New event…** Enter the name, type, date, location and coordinator. Under *Start from*, pick a template or a previous event. Leave *Create the sign-up form straight away* ticked.
 2. Copy the **sign-up form link** into the newsletter, Facebook or class WhatsApp groups. The link is also on the Events tab.
@@ -63,7 +82,8 @@ New to this? Ask the Secretary for the illustrated setup guide (PDF, kept in the
 6. Open **Gmail › Drafts**, read through the thank-yous and send them.
 
 ### Cancellations and the waitlist
-- When someone cancels, set their *Status* to **Cancelled** and click **Refresh counts, forms & stats**. The spot goes back on the form.
+- Volunteers usually cancel themselves from the link in their email. The spot goes back on the form and the coordinator is told.
+- To cancel someone from the Sheet, set their *Status* to **Cancelled** and click **Refresh counts, forms & stats**. The spot goes back on the form.
 - If a slot fills while someone has the form open, they're added as **Waitlist** and told so. The daily summary tells you when a spot opens for someone on the waitlist. Change their status to **Confirmed** and let them know.
 
 ### Big events: group (BCC) emails
