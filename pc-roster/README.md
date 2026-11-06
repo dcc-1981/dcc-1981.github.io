@@ -12,7 +12,7 @@ A volunteer roster that runs inside one Google Sheet. Coordinators build an even
 | **Custom questions** | Each event can ask extra questions, e.g. "Can you bring a plate? [Yes\|No]". |
 | **WWC (canteen only)** | Only canteen forms ask for a Working with Children card. A card on file is reused next time. Missing or expired cards are marked *Pending WWC* and flagged to you. Event forms never ask. |
 | **Hours** | Worked out from slot times. You can change *Actual hours* or set *Attended = No* before finishing an event. |
-| **Thank-yous** | After each event, a personal thank-you is saved in Gmail Drafts for each volunteer, listing their shifts and approximate hours. Nothing is sent without you. |
+| **Thank-yous** | After each event, a short, plain thank-you note is saved in Gmail Drafts for each volunteer. It's signed by the event coordinator and reads like a personal email. Nothing is sent without you. |
 | **Stats** | Hours, unique volunteers and shifts by year, by event type and by event. Each volunteer's running total is on the Volunteers tab. |
 | **Daily check (7am)** | Prepares reminders, finishes past events, notices free spots with a waitlist, flags WWC issues, and emails you a short summary only when something needs attention. |
 
@@ -56,7 +56,7 @@ For events with lots of volunteers, such as a disco with several sessions and 70
 |---|---|---|
 | Sign-up confirmation | Sent automatically to each person | The same. It's automatic and confirms their own slots. |
 | Reminder | One per volunteer | **One per session** (same start and finish time), to that session's volunteers in BCC. It lists the session's roles. |
-| Thank-you | One draft per volunteer, with their own shifts and hours | **One draft for the whole event**, to everyone who attended in BCC. It gives the volunteer count and total hours. |
+| Thank-you | One short note per volunteer ("Hi Ann, …") | **One short note for the whole event** ("Hi everyone, …"), to everyone who attended in BCC. |
 
 Group emails are addressed to the *Public email* (hello@wembleypc.org.au) with volunteers in **BCC**, so nobody sees anyone else's address. Replies go to the event coordinator. Lists bigger than *Group email size limit* (450) are split into several drafts to stay under Gmail's per-message limit. The wording is under *Group reminder…* and *Group thank-you…* in Settings.
 
@@ -99,11 +99,22 @@ Everything follows the **Brand Identity Guide v1.1 (Oct 2026)**. Where this READ
 
 | Where | What's applied |
 |---|---|
-| **Emails** (confirmations, reminders, thank-you drafts) | The full-colour logo on white, a Wembley Cyan rule, a small navy caps label, and the event name as a Nunito Deep Navy heading. Body text is Lato in Near-Black. Shifts sit on a Panel Tint card with Wembley Navy date tiles. The Deep Navy footer carries hello@wembleypc.org.au, Facebook and "Join the P&C for $1 via Qkr!". A plain-text version is always included. |
+| **Emails** (confirmations and reminders) | The full-colour logo on white, a Wembley Cyan rule, a small navy caps label, and the event name as a Nunito Deep Navy heading. Body text is Lato in Near-Black. Shifts sit on a Panel Tint card with Wembley Navy date tiles. The Deep Navy footer carries hello@wembleypc.org.au, Facebook and "Join the P&C for $1 via Qkr!". A plain-text version is always included. |
 | **Sign-up forms** | Each form copies the branded master form (below), and the description ends with the standard footer. |
 | **The Sheet** | Navy header rows in Nunito, Lato throughout, Panel Tint row banding, brand tab colours, and a styled Stats tab. |
 | **Dialogs** | Nunito labels, Lato text, navy rounded buttons, Pale Blue inputs and a cyan focus ring. There's never white text on cyan. |
 | **Wording** | Follows the voice guide: warm and plain, at most one exclamation mark per message, no guilt-tripping. ("Even one shift makes a difference" rather than "we desperately need you".) |
+
+**Thank-yous are deliberately plain.** They have no logo, design or footer, so they read like a note from the coordinator:
+
+> Hi Ann,
+>
+> Thank you for helping out at Disco Fever. We really couldn't do it without people like you, and it made a real difference.
+>
+> Thanks again,
+> Sam
+
+They're signed with the event's *Coordinator* name (or *Sender name* if no coordinator is set). You can change the wording under *Thank-you body* in Settings. To use the branded design instead, set *Thank-you style* to Branded.
 
 **Logo.** The *Logo file* setting points to `Wembley P&C Logo.png` in the Brand Assets shared drive. Emails attach it from there, so whoever runs Setup needs access to that file. If it can't be found, the email header falls back to "Wembley PS P&C" in Nunito navy.
 

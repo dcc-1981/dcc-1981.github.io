@@ -59,6 +59,12 @@ const BRAND = {
   bodyStack: "'Lato', 'Helvetica Neue', Helvetica, sans-serif",
 };
 
+// Earlier default wording, replaced by Setup / repair only if nobody has edited it.
+const RETIRED_DEFAULTS = {
+  'Thank-you body': ['Hi {FirstName},\n\nThank you so much for volunteering at {EventName} on {EventDate}. You gave us {Hours}, helping with:\n{Shifts}\n\nEvents like this only happen because families like yours pitch in, and every dollar raised goes back into our school.\n\nWith thanks,\n{SenderName}\n{PCName}'],
+  'Group thank-you body': ['Hi everyone,\n\nThank you to all {VolunteerCount} volunteers who helped at {EventName} on {EventDate}. Between you, you gave about {TotalHours} hours across {ShiftCount} shifts.\n\nEvents like this only happen because families like yours pitch in, and every dollar raised goes back into our school.\n\nWith thanks,\n{SenderName}\n{PCName}'],
+};
+
 const EVENT_STATUSES = ['Draft', 'Open', 'Closed', 'Done'];
 const SIGNUP_STATUSES = ['Confirmed', 'Pending WWC', 'Waitlist', 'Cancelled'];
 const ACTIVE = ['Confirmed', 'Pending WWC']; // statuses that hold a spot
@@ -104,10 +110,11 @@ const DEFAULT_SETTINGS = [
   ['Group email size limit', '450', 'Most people per BCC email. Bigger lists are split into several drafts (Gmail allows about 500 per message).'],
   ['Group reminder subject', 'Reminder: {EventName}, {SessionTime} on {EventDate}', 'Group placeholders: {EventName} {EventDate} {Location} {SessionTime} {Shifts} {VolunteerCount} {Coordinator} {CoordinatorEmail} {SenderName} {PCName}'],
   ['Group reminder body', 'Hi everyone,\n\nJust a friendly reminder that you\'re rostered on for {EventName} on {EventDate} at {Location}, {SessionTime}. This session\'s roles:\n{Shifts}\n\nIf you can no longer make it, please reply so we can find someone to cover.\n\nSee you there!\n{SenderName}\n{PCName}', ''],
-  ['Group thank-you subject', 'Thank you for helping at {EventName}', 'Also: {TotalHours} {ShiftCount}'],
-  ['Group thank-you body', 'Hi everyone,\n\nThank you to all {VolunteerCount} volunteers who helped at {EventName} on {EventDate}. Between you, you gave about {TotalHours} hours across {ShiftCount} shifts.\n\nEvents like this only happen because families like yours pitch in, and every dollar raised goes back into our school.\n\nWith thanks,\n{SenderName}\n{PCName}', ''],
+  ['Group thank-you subject', 'Thank you for helping at {EventName}', ''],
+  ['Group thank-you body', 'Hi everyone,\n\nThank you for helping out at {EventName}. We really couldn\'t do it without people like you, and it made a real difference.\n\nThanks again,\n{SenderName}', 'Kept short and personal on purpose. {VolunteerCount} {TotalHours} and {ShiftCount} are available if you ever want them.'],
+  ['Thank-you style', 'Personal', 'Personal = a plain email that reads like a note from the coordinator (no design, no footer). Branded = the P&C email design.'],
   ['Thank-you subject', 'Thank you for helping at {EventName}', ''],
-  ['Thank-you body', 'Hi {FirstName},\n\nThank you so much for volunteering at {EventName} on {EventDate}. You gave us {Hours}, helping with:\n{Shifts}\n\nEvents like this only happen because families like yours pitch in, and every dollar raised goes back into our school.\n\nWith thanks,\n{SenderName}\n{PCName}', ''],
+  ['Thank-you body', 'Hi {FirstName},\n\nThank you for helping out at {EventName}. We really couldn\'t do it without people like you, and it made a real difference.\n\nThanks again,\n{SenderName}', 'Signed by the event coordinator (or Sender name if there isn\'t one).'],
 ];
 
 /* ============================== Menu ============================== */
@@ -233,6 +240,15 @@ function setupRoster() {
   const add = DEFAULT_SETTINGS.filter(r => have.indexOf(r[0]) < 0).map(r => r.slice());
   add.forEach(r => { if (r[0] === 'Admin email' && !r[1]) r[1] = Session.getEffectiveUser().getEmail(); });
   if (add.length) set.getRange(set.getLastRow() + 1, 1, add.length, 3).setValues(add);
+  // Update wording that still matches an old default (never touches edited text).
+  if (set.getLastRow() > 1) {
+    const vals = set.getRange(2, 1, set.getLastRow() - 1, 3).getValues();
+    vals.forEach((r, i) => {
+      const old = RETIRED_DEFAULTS[String(r[0])];
+      const def = DEFAULT_SETTINGS.filter(d => d[0] === String(r[0]))[0];
+      if (old && def && old.indexOf(String(r[1])) >= 0) set.getRange(i + 2, 2, 1, 2).setValues([[def[1], def[2]]]);
+    });
+  }
   set.getRange('B:B').setWrap(true);
   set.getRange('C:C').setWrap(true).setFontColor(BRAND.midGrey);
   set.setColumnWidth(1, 220); set.setColumnWidth(2, 420); set.setColumnWidth(3, 420);
@@ -852,7 +868,7 @@ function processSignup_(ev, ans, timestamp) {
     const m = composeEmail_('You\'re on the roster', st['Confirmation subject'], st['Confirmation body'], vars, shifts, ev, st);
     MailApp.sendEmail(clean_({
       to: email, subject: m.subject, body: m.text, htmlBody: m.html, inlineImages: m.inlineImages,
-      name: vars.SenderName, replyTo: replyTo_(ev, st),
+      name: fromName_(st), replyTo: replyTo_(ev, st),
     }));
   }
 
@@ -941,7 +957,7 @@ function closeEvent_(eventId) {
       FirstName: 'everyone', VolunteerCount: emails.length, ShiftCount: shiftCount,
       TotalHours: String(Math.round(total * 2) / 2),
     });
-    const m = composeEmail_('Thank you', st['Group thank-you subject'], st['Group thank-you body'], vars, [], ev, st);
+    const m = composeEmail_('Thank you', st['Group thank-you subject'], st['Group thank-you body'], vars, [], ev, st, personalThanks_(st));
     drafts = groupDrafts_(emails, m, vars, ev, st, false);
     emails.forEach(e => people[e].rows.forEach(i => t.set(i, 'Thank-you', stamp + ' (group)')));
     emails.length = 0; // handled
@@ -949,9 +965,9 @@ function closeEvent_(eventId) {
   emails.forEach(email => {
     const p = people[email];
     const vars = templateVars_(ev, p.name, p.shifts.map(shiftText_), sumHours_(p.hours), st);
-    const m = composeEmail_('Thank you', st['Thank-you subject'], st['Thank-you body'], vars, p.shifts, ev, st);
+    const m = composeEmail_('Thank you', st['Thank-you subject'], st['Thank-you body'], vars, p.shifts, ev, st, personalThanks_(st));
     GmailApp.createDraft(email, m.subject, m.text, clean_({
-      htmlBody: m.html, inlineImages: m.inlineImages, name: vars.SenderName, replyTo: replyTo_(ev, st),
+      htmlBody: m.html, inlineImages: m.inlineImages, name: fromName_(st), replyTo: replyTo_(ev, st),
     }));
     p.rows.forEach(i => t.set(i, 'Thank-you', stamp));
     drafts++;
@@ -1009,7 +1025,7 @@ function dailyRosterJob() {
       const vars = templateVars_(ev, g.name, g.shifts.map(shiftText_), sumHours_(g.hours), st);
       vars.EventDate = fmtDate_(keyToDate_(target), 'EEEE d MMMM'); // the shift's day (matters for multi-day rosters like canteen weeks)
       const m = composeEmail_('Reminder', st['Reminder subject'], st['Reminder body'], vars, g.shifts, ev, st);
-      const opts = clean_({ htmlBody: m.html, inlineImages: m.inlineImages, name: vars.SenderName, replyTo: replyTo_(ev, st) });
+      const opts = clean_({ htmlBody: m.html, inlineImages: m.inlineImages, name: fromName_(st), replyTo: replyTo_(ev, st) });
       if (mode === 'send') GmailApp.sendEmail(g.email, m.subject, m.text, opts); else GmailApp.createDraft(g.email, m.subject, m.text, opts);
       g.rows.forEach(i => t.set(i, 'Reminder', (mode === 'send' ? 'Sent ' : 'Drafted ') + fmtDate_(new Date(), 'd MMM')));
       n++;
@@ -1189,7 +1205,7 @@ function templateVars_(ev, name, lines, hours, st) {
     Hours: hours > 0 ? `about ${fmtHours_(hours)}` : 'your time',
     Coordinator: ev.coordinator || '',
     CoordinatorEmail: ev.coordinatorEmail || '',
-    SenderName: st['Sender name'] || 'The P&C team',
+    SenderName: ev.coordinator || st['Sender name'] || 'The P&C team',
     PCName: st['P&C name'] || '',
   };
 }
@@ -1230,12 +1246,21 @@ function groupDrafts_(emails, m, vars, ev, st, send) {
   for (let i = 0; i < emails.length; i += size) {
     const opts = clean_({
       bcc: emails.slice(i, i + size).join(','), htmlBody: m.html, inlineImages: m.inlineImages,
-      name: vars.SenderName, replyTo: replyTo_(ev, st),
+      name: fromName_(st), replyTo: replyTo_(ev, st),
     });
     if (send) GmailApp.sendEmail(to, m.subject, m.text, opts); else GmailApp.createDraft(to, m.subject, m.text, opts);
     n++;
   }
   return n;
+}
+
+function personalThanks_(st) {
+  return !/^branded$/i.test(String(st['Thank-you style'] || 'Personal').trim());
+}
+
+/** Display name on outgoing email. */
+function fromName_(st) {
+  return st['Sender name'] || st['P&C name'] || 'P&C';
 }
 
 function replyTo_(ev, st) {
@@ -1248,8 +1273,12 @@ function replyTo_(ev, st) {
  * Builds subject, plain text and (if Branded emails = Yes) the HTML version.
  * The wording comes from the Settings templates; the HTML adds the P&C design around it.
  */
-function composeEmail_(kicker, subjectTpl, bodyTpl, vars, shifts, ev, st) {
+function composeEmail_(kicker, subjectTpl, bodyTpl, vars, shifts, ev, st, personal) {
   const subject = fill_(subjectTpl, vars);
+  if (personal) {
+    // Reads like a note typed by a person: no design, no footer.
+    return { subject, text: fill_(bodyTpl, Object.assign({}, vars, { Shifts: shifts.map(shiftText_).join('\n') })) };
+  }
   const footer = footerLine_(st);
   const text = fill_(bodyTpl, Object.assign({}, vars, { Shifts: shifts.map(shiftText_).join('\n') })) +
     (footer ? '\n\n—\n' + footer : '');
