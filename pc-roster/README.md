@@ -37,6 +37,20 @@ New to this? Follow the illustrated step-by-step guide: **[PC Volunteer Roster -
 
 > Run Setup from the account that should own the drafts and send the emails, ideally a shared P&C account rather than a personal one. The daily check and the thank-you drafts run as that account.
 
+## Who does what
+
+| Person | What they do | Code? |
+|---|---|---|
+| **Secretary (you)** | The one-time setup, plus pasting in any code updates | Yes, once |
+| **Event coordinators** | Create events, edit slots and manage sign-ups from the P&C Roster menu | **No.** They just need **Editor** access to the Sheet. |
+| **Families** | Fill in the sign-up form | No |
+
+- The first time a coordinator uses the menu, Google shows them the "hasn't verified this app" screen once (Advanced, then Go to P&C Roster). Warn them it's coming.
+- Confirmations, reminders and the automatic thank-yous always come from the account that ran Setup. If a coordinator uses **Finish event & draft thank-yous** themselves, the drafts land in *their* Gmail.
+- Forms a coordinator creates are saved in their Google Drive.
+- Only the Setup account runs the automatic jobs. If someone else runs **Setup / repair**, it checks the tabs but won't start a second set of jobs, because that would send duplicate emails.
+- **Handover to a new Secretary:** the outgoing Secretary runs **P&C Roster › Stop automatic jobs (handover)**. The new Secretary then runs **Setup / repair** straight away from their own account.
+
 ## Running an event
 
 1. **P&C Roster › New event…** Enter the name, type, date, location and coordinator. Under *Start from*, pick a template or a previous event. Leave *Create the sign-up form straight away* ticked.

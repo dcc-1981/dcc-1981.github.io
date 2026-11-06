@@ -135,6 +135,7 @@ function onOpen() {
     .addItem('Run daily checks now', 'dailyRosterJob')
     .addSeparator()
     .addItem('Setup / repair', 'setupRoster')
+    .addItem('Stop automatic jobs (handover)', 'menuStopJobs')
     .addToUi();
 }
 
@@ -255,11 +256,15 @@ function setupRoster() {
 
   formatSheets_();
   if (sheet_(SH.TEMPLATES).getLastRow() <= 1) addSampleTemplates_();
-  installTriggers_();
+  const jobsOwner = installTriggers_();
 
   if (ss.getSpreadsheetTimeZone() !== Session.getScriptTimeZone()) {
     alert_(`Heads up: this sheet's time zone (${ss.getSpreadsheetTimeZone()}) differs from the script's (${Session.getScriptTimeZone()}).\n` +
       'Set both to Australia/Perth (File › Settings, and Apps Script › Project settings) so dates line up.');
+  }
+  if (jobsOwner) {
+    alert_(`Tabs and formatting checked.\n\nThe automatic jobs (sign-ups, emails, daily check) already run under ${jobsOwner}, so nothing else was changed. You don't need to run Setup – just use P&C Roster › New event…`);
+    return;
   }
   alert_('Setup complete.\n\nNext: P&C Roster › New event… to create your first event.\nCheck the Settings tab to adjust email wording and options.');
 }
@@ -358,8 +363,19 @@ function addSampleTemplates_() {
   })));
 }
 
+/**
+ * The automatic jobs (form sign-ups, daily check) must run under ONE account, or every
+ * volunteer gets duplicate emails. Google only lets each person see their own triggers, so we
+ * record who owns them and refuse to add a second set for anyone else.
+ * Returns '' when this account owns the jobs, or the owner's email when someone else does.
+ */
 function installTriggers_() {
   const ss = ss_();
+  const props = PropertiesService.getDocumentProperties();
+  const me = Session.getEffectiveUser().getEmail();
+  const owner = props.getProperty('jobsOwner');
+  if (owner && owner !== me) return owner;
+  props.setProperty('jobsOwner', me);
   const existing = ScriptApp.getProjectTriggers().map(t => t.getHandlerFunction());
   if (existing.indexOf('onRosterFormSubmit') < 0) {
     ScriptApp.newTrigger('onRosterFormSubmit').forSpreadsheet(ss).onFormSubmit().create();
@@ -367,6 +383,23 @@ function installTriggers_() {
   if (existing.indexOf('dailyRosterJob') < 0) {
     ScriptApp.newTrigger('dailyRosterJob').timeBased().everyDays(1).atHour(7).create();
   }
+  return '';
+}
+
+/** For a role handover: the current owner stops their automatic jobs so the new person can run Setup. */
+function menuStopJobs() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getDocumentProperties();
+  const me = Session.getEffectiveUser().getEmail();
+  const owner = props.getProperty('jobsOwner');
+  if (owner && owner !== me) {
+    alert_(`The automatic jobs belong to ${owner}. Only they can stop them – ask them to run this menu item.`);
+    return;
+  }
+  if (ui.alert('Stop automatic jobs?', 'Use this when handing over the roster. Sign-ups will stop being processed and no daily checks or emails will run until the new person runs P&C Roster › Setup / repair.\n\nContinue?', ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
+  props.deleteProperty('jobsOwner');
+  alert_('Automatic jobs stopped. The new person should now run P&C Roster › Setup / repair from their own account – straight away, so no sign-ups are missed.');
 }
 
 /* ============================== Events & slots ============================== */
