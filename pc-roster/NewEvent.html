@@ -60,6 +60,13 @@
   <textarea id="extra" placeholder="Can you bring a plate to share? [Yes|No]&#10;*Do you have a current food handling certificate? [Yes|No]"></textarea>
   <div class="hint">Leave blank to use the template's or previous event's questions.</div>
 
+  <label>Reminders &amp; thank-yous</label>
+  <select id="groupEmails">
+    <option value="">Use the default from Settings</option>
+    <option value="Yes">One group email (BCC) – best for big events</option>
+    <option value="No">A personal email to each volunteer</option>
+  </select>
+
   <label class="check"><input type="checkbox" id="createForm" checked> Create the sign-up form straight away</label>
   <div class="hint">Untick if you want to tweak slots on the Slots tab first (then use “Create / update sign-up form”).</div>
 
@@ -93,7 +100,7 @@
       var data = {
         name: v('name'), type: v('type'), date: v('date'), location: v('location'),
         coordinator: v('coordinator'), coordinatorEmail: v('coordinatorEmail'),
-        source: v('source'), extraQuestions: v('extra'),
+        source: v('source'), extraQuestions: v('extra'), groupEmails: v('groupEmails'),
         createForm: document.getElementById('createForm').checked
       };
       if (!data.name || !data.date) { show('Please enter an event name and date.', false); return; }

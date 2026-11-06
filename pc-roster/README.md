@@ -49,6 +49,19 @@ A volunteer roster that runs inside one Google Sheet. Coordinators build an even
 - When someone cancels, set their *Status* to **Cancelled** and click **Refresh counts, forms & stats**. The spot goes back on the form.
 - If a slot fills while someone has the form open, they're added as **Waitlist** and told so. The daily summary tells you when a spot opens for someone on the waitlist. Change their status to **Confirmed** and let them know.
 
+### Big events: group (BCC) emails
+For events with lots of volunteers, such as a disco with several sessions and 70 helpers, switch on **group emails**. You can do this for one event (New event dialog, or the *Group emails* column on the Events tab) or for everything (*Group emails* in Settings).
+
+| Email | Personal mode | Group mode |
+|---|---|---|
+| Sign-up confirmation | Sent automatically to each person | The same. It's automatic and confirms their own slots. |
+| Reminder | One per volunteer | **One per session** (same start and finish time), to that session's volunteers in BCC. It lists the session's roles. |
+| Thank-you | One draft per volunteer, with their own shifts and hours | **One draft for the whole event**, to everyone who attended in BCC. It gives the volunteer count and total hours. |
+
+Group emails are addressed to the *Public email* (hello@wembleypc.org.au) with volunteers in **BCC**, so nobody sees anyone else's address. Replies go to the event coordinator. Lists bigger than *Group email size limit* (450) are split into several drafts to stay under Gmail's per-message limit. The wording is under *Group reminder…* and *Group thank-you…* in Settings.
+
+**Sending from hello@:** drafts are saved in the account that ran Setup. To send them *from* hello@wembleypc.org.au, add it as a "Send mail as" address in that Gmail account, then pick it in the From field before sending.
+
 ### Canteen and WWC
 - Use the event type **Canteen** (e.g. from the *Canteen week* template, which covers Monday to Friday). Only those forms ask for a WWC card number and expiry date.
 - If a volunteer has no card on file, or it expires before their shift, the sign-up is marked **Pending WWC**, and you and the coordinator get an email. Once it's checked, change the status to **Confirmed**.

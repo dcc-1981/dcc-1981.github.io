@@ -29,7 +29,7 @@ const SH = {
 
 const HEADERS = {
   [SH.EVENTS]: ['Event ID', 'Event name', 'Type', 'Date', 'Location', 'Coordinator', 'Coordinator email',
-    'Status', 'Extra questions', 'Sign-up form link', 'Form edit link', 'Form ID', 'Thank-yous drafted', 'Notes'],
+    'Status', 'Extra questions', 'Group emails', 'Sign-up form link', 'Form edit link', 'Form ID', 'Thank-yous drafted', 'Notes'],
   [SH.SLOTS]: ['Event ID', 'Slot #', 'Date', 'Start', 'End', 'Role / task', 'Spots', 'Description', 'Filled', 'Remaining'],
   [SH.TEMPLATES]: ['Template', 'Day offset', 'Start', 'End', 'Role / task', 'Spots', 'Description', 'Extra questions'],
   [SH.SIGNUPS]: ['Timestamp', 'Event ID', 'Event name', 'Slot #', 'Role / task', 'Slot date', 'Start', 'End',
@@ -100,6 +100,12 @@ const DEFAULT_SETTINGS = [
   ['Confirmation body', 'Hi {FirstName},\n\nThanks for signing up to help at {EventName} ({EventDate}, {Location}). Here are your slots:\n{Shifts}\n\nIf you can no longer make it, just reply to this email and we\'ll sort it out.\n\nThank you!\n{SenderName}\n{PCName}', ''],
   ['Reminder subject', 'Reminder: {EventName} on {EventDate}', ''],
   ['Reminder body', 'Hi {FirstName},\n\nJust a friendly reminder that you\'re helping at {EventName} on {EventDate} at {Location}:\n{Shifts}\n\nIf anything has changed, please reply to let us know.\n\nSee you there!\n{SenderName}\n{PCName}', ''],
+  ['Group emails', 'No', 'Yes = reminders and thank-yous go as one BCC email (one thank-you per event, one reminder per session) instead of one per person. Set "Group emails" on the Events tab to override for one event. Sign-up confirmations are always individual.'],
+  ['Group email size limit', '450', 'Most people per BCC email. Bigger lists are split into several drafts (Gmail allows about 500 per message).'],
+  ['Group reminder subject', 'Reminder: {EventName}, {SessionTime} on {EventDate}', 'Group placeholders: {EventName} {EventDate} {Location} {SessionTime} {Shifts} {VolunteerCount} {Coordinator} {CoordinatorEmail} {SenderName} {PCName}'],
+  ['Group reminder body', 'Hi everyone,\n\nJust a friendly reminder that you\'re rostered on for {EventName} on {EventDate} at {Location}, {SessionTime}. This session\'s roles:\n{Shifts}\n\nIf you can no longer make it, please reply so we can find someone to cover.\n\nSee you there!\n{SenderName}\n{PCName}', ''],
+  ['Group thank-you subject', 'Thank you for helping at {EventName}', 'Also: {TotalHours} {ShiftCount}'],
+  ['Group thank-you body', 'Hi everyone,\n\nThank you to all {VolunteerCount} volunteers who helped at {EventName} on {EventDate}. Between you, you gave about {TotalHours} hours across {ShiftCount} shifts.\n\nEvents like this only happen because families like yours pitch in, and every dollar raised goes back into our school.\n\nWith thanks,\n{SenderName}\n{PCName}', ''],
   ['Thank-you subject', 'Thank you for helping at {EventName}', ''],
   ['Thank-you body', 'Hi {FirstName},\n\nThank you so much for volunteering at {EventName} on {EventDate}. You gave us {Hours}, helping with:\n{Shifts}\n\nEvents like this only happen because families like yours pitch in, and every dollar raised goes back into our school.\n\nWith thanks,\n{SenderName}\n{PCName}', ''],
 ];
@@ -126,7 +132,7 @@ function onOpen() {
 }
 
 function menuNewEvent() {
-  const html = HtmlService.createHtmlOutputFromFile('NewEvent').setWidth(460).setHeight(640);
+  const html = HtmlService.createHtmlOutputFromFile('NewEvent').setWidth(460).setHeight(700);
   SpreadsheetApp.getUi().showModalDialog(html, 'New event');
 }
 
@@ -275,6 +281,7 @@ function formatSheets_() {
   setColumnFormat_(ev, 'Date', 'ddd d mmm yyyy');
   setValidationList_(ev, 'Type', types);
   setValidationList_(ev, 'Status', EVENT_STATUSES);
+  setValidationList_(ev, 'Group emails', ['Yes', 'No']);
   setColumnFormat_(ev, 'Thank-yous drafted', 'd mmm yyyy');
   hideColumns_(ev, ['Form ID']);
 
@@ -387,6 +394,7 @@ function createEventFromDialog(d) {
     'Event ID': id, 'Event name': d.name.trim(), 'Type': d.type, 'Date': date,
     'Location': (d.location || '').trim(), 'Coordinator': (d.coordinator || '').trim(),
     'Coordinator email': (d.coordinatorEmail || '').trim(), 'Status': 'Draft', 'Extra questions': extra,
+    'Group emails': d.groupEmails || '',
   }]);
 
   if (copied.length) {
@@ -479,6 +487,7 @@ function events_() {
     coordinatorEmail: String(r['Coordinator email'] || '').trim(),
     status: String(r['Status'] || 'Draft').trim() || 'Draft',
     extra: String(r['Extra questions'] || ''),
+    group: String(r['Group emails'] || '').trim(),
     formUrl: String(r['Sign-up form link'] || ''),
     formId: String(r['Form ID'] || ''),
   })).filter(e => e.id);
@@ -924,7 +933,20 @@ function closeEvent_(eventId) {
   });
 
   let drafts = 0;
-  Object.keys(people).forEach(email => {
+  const emails = Object.keys(people);
+  if (emails.length && groupEmails_(ev, st)) {
+    let shiftCount = 0, total = 0;
+    emails.forEach(e => { shiftCount += people[e].shifts.length; total += sumHours_(people[e].hours); });
+    const vars = Object.assign(templateVars_(ev, '', [], total, st), {
+      FirstName: 'everyone', VolunteerCount: emails.length, ShiftCount: shiftCount,
+      TotalHours: String(Math.round(total * 2) / 2),
+    });
+    const m = composeEmail_('Thank you', st['Group thank-you subject'], st['Group thank-you body'], vars, [], ev, st);
+    drafts = groupDrafts_(emails, m, vars, ev, st, false);
+    emails.forEach(e => people[e].rows.forEach(i => t.set(i, 'Thank-you', stamp + ' (group)')));
+    emails.length = 0; // handled
+  }
+  emails.forEach(email => {
     const p = people[email];
     const vars = templateVars_(ev, p.name, p.shifts.map(shiftText_), sumHours_(p.hours), st);
     const m = composeEmail_('Thank you', st['Thank-you subject'], st['Thank-you body'], vars, p.shifts, ev, st);
@@ -955,11 +977,24 @@ function dailyRosterJob() {
   if (mode === 'draft' || mode === 'send') {
     const target = dateKey_(addDays_(keyToDate_(today), Number(st['Reminder days before']) || 2));
     const t = getTable_(SH.SIGNUPS);
-    const groups = {};
+    const groups = {}, sessions = {}, evCache = {};
     t.rows.forEach((r, i) => {
       if (ACTIVE.indexOf(String(r['Status'])) < 0 || String(r['Reminder']).trim()) return;
       const d = toDate_(r['Slot date']);
       if (!d || dateKey_(d) !== target || !r['Email']) return;
+      const evId = String(r['Event ID']);
+      if (!(evId in evCache)) evCache[evId] = getEvent_(evId);
+      const shift = { date: d, role: String(r['Role / task']), start: parseTime_(t.disp[i]['Start']), end: parseTime_(t.disp[i]['End']) };
+      if (evCache[evId] && groupEmails_(evCache[evId], st)) {
+        // One BCC email per session (same start and finish time).
+        const sk = evId + '|' + shift.start + '|' + shift.end;
+        const g = sessions[sk] = sessions[sk] || { ev: evCache[evId], shift, emails: [], roles: [], rows: [] };
+        const em = String(r['Email']).trim().toLowerCase();
+        if (g.emails.indexOf(em) < 0) g.emails.push(em);
+        if (!g.roles.some(x => x.role === shift.role)) g.roles.push(Object.assign({ brief: true }, shift));
+        g.rows.push(i);
+        return;
+      }
       const k = r['Event ID'] + '|' + String(r['Email']).toLowerCase();
       if (!groups[k]) groups[k] = { eventId: String(r['Event ID']), email: String(r['Email']).toLowerCase(), name: String(r['Name']), rows: [], shifts: [], hours: [] };
       groups[k].rows.push(i);
@@ -978,6 +1013,16 @@ function dailyRosterJob() {
       if (mode === 'send') GmailApp.sendEmail(g.email, m.subject, m.text, opts); else GmailApp.createDraft(g.email, m.subject, m.text, opts);
       g.rows.forEach(i => t.set(i, 'Reminder', (mode === 'send' ? 'Sent ' : 'Drafted ') + fmtDate_(new Date(), 'd MMM')));
       n++;
+    });
+    Object.keys(sessions).forEach(k => {
+      const g = sessions[k];
+      const vars = Object.assign(templateVars_(g.ev, '', g.roles.map(shiftText_), 0, st), {
+        FirstName: 'everyone', VolunteerCount: g.emails.length,
+        EventDate: fmtDate_(g.shift.date, 'EEEE d MMMM'), SessionTime: timeRange_(g.shift) || 'all day',
+      });
+      const m = composeEmail_('Reminder', st['Group reminder subject'], st['Group reminder body'], vars, g.roles, g.ev, st);
+      n += groupDrafts_(g.emails, m, vars, g.ev, st, mode === 'send');
+      g.rows.forEach(i => t.set(i, 'Reminder', (mode === 'send' ? 'Sent ' : 'Drafted ') + fmtDate_(new Date(), 'd MMM') + ' (group)'));
     });
     if (n) digest.push(`${n} reminder email(s) ${mode === 'send' ? 'sent' : 'saved in Gmail Drafts – please check and send'}.`);
   }
@@ -1163,7 +1208,34 @@ function statusNote_(status) {
 
 /** One shift as a plain-text line, with any status note. */
 function shiftText_(s) {
+  if (s.brief) return `• ${s.role}`; // group reminders: date and time are already in the sentence
   return shiftLine_(s) + (s.note ? ` – ${s.note}` : '');
+}
+
+/** Whether an event's reminders and thank-yous go as group (BCC) emails. */
+function groupEmails_(ev, st) {
+  if (/^(y|yes)$/i.test(ev.group || '')) return true;
+  if (/^(n|no)$/i.test(ev.group || '')) return false;
+  return isYes_(st['Group emails']);
+}
+
+/**
+ * One email to the P&C's own address with volunteers in BCC, split into batches
+ * under Gmail's per-message limit. Returns the number of drafts/emails made.
+ */
+function groupDrafts_(emails, m, vars, ev, st, send) {
+  const to = st['Public email'] || st['Admin email'];
+  const size = Math.max(1, Math.min(Number(st['Group email size limit']) || 450, 490));
+  let n = 0;
+  for (let i = 0; i < emails.length; i += size) {
+    const opts = clean_({
+      bcc: emails.slice(i, i + size).join(','), htmlBody: m.html, inlineImages: m.inlineImages,
+      name: vars.SenderName, replyTo: replyTo_(ev, st),
+    });
+    if (send) GmailApp.sendEmail(to, m.subject, m.text, opts); else GmailApp.createDraft(to, m.subject, m.text, opts);
+    n++;
+  }
+  return n;
 }
 
 function replyTo_(ev, st) {
