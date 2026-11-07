@@ -1444,16 +1444,17 @@ function esc_(v) {
 
 /* ============================== Coordinator page & volunteer self-service ==============================
  * Published once by the Secretary as a Web app (Execute as: me · Who has access: Anyone).
- * Coordinators open ?c=<their key>; volunteers open ?x=<their manage token> from their emails.
+ * Coordinators open ?k=<their key> (Google reserves ?c= in web app URLs); volunteers open ?x=<their manage token> from their emails.
  * Every server call re-checks the key or token. Coordinators only ever see their own events.
  */
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (p.c) {
-    const c = coordinatorByKey_(p.c);
+  const ck = p.k || p.c;
+  if (ck) {
+    const c = coordinatorByKey_(ck);
     if (!c) return messagePage_('This link isn\'t active', 'Please ask the P&C Secretary for a new coordinator link.');
-    return bootPage_('Coordinator', { key: p.c, name: c.name }, 'P&C volunteer roster');
+    return bootPage_('Coordinator', { key: ck, name: c.name }, 'P&C volunteer roster');
   }
   if (p.x && vmRows_(p.x).length) return bootPage_('Manage', { token: p.x }, 'Your volunteer spots');
   return messagePage_('Link not found', 'This link may have expired. If you need to change your volunteer spot, just reply to your confirmation email.');
@@ -1552,7 +1553,7 @@ function menuCoordinatorLinks() {
     if (!String(r['Email']).trim()) return;
     if (!r['Key']) { t.set(i, 'Key', newToken_()); made++; }
     if (!String(r['Active']).trim()) t.set(i, 'Active', 'Yes');
-    t.set(i, 'Page link', `${url}?c=${t.rows[i]['Key']}`);
+    t.set(i, 'Page link', `${url}?k=${t.rows[i]['Key']}`);
   });
 
   const unsent = t.rows.map((r, i) => i).filter(i => t.rows[i]['Email'] && !String(t.rows[i]['Welcome email']).trim() && !/^no$/i.test(String(t.rows[i]['Active'])));
@@ -1910,7 +1911,7 @@ function vmCancel(token, ref) {
         subject: `${x.r['Name']} can no longer help at ${ev.name}`,
         body: `${x.r['Name']} has cancelled their spot:\n${shiftLine_(s)}\n\nThe spot is open again on the sign-up form.` +
           (waiting.length ? `\n\nOn the waitlist for this slot: ${waiting.join(', ')}. Add one of them from your page if you'd like.` : '') +
-          (c && url ? `\n\nYour page: ${url}?c=${c.key}` : ''),
+          (c && url ? `\n\nYour page: ${url}?k=${c.key}` : ''),
       }));
     }
   }
@@ -1956,7 +1957,7 @@ function coordinatorUpdates_(st) {
       to: email, name: fromName_(st),
       subject: g.events.length === 1 ? `Volunteer update: ${g.events[0].split(' – ')[0]}` : `Volunteer update: ${g.events.length} events`,
       body: `Hi ${first},\n\nHere's what's changed since yesterday.\n\n${g.events.join('\n\n')}` +
-        (c && url ? `\n\nSee everyone and make changes: ${url}?c=${c.key}` : '') + '\n\nThanks for organising.',
+        (c && url ? `\n\nSee everyone and make changes: ${url}?k=${c.key}` : '') + '\n\nThanks for organising.',
     }));
   });
 }
