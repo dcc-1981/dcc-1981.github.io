@@ -68,7 +68,7 @@ New to this? Ask the Secretary for the illustrated setup guide (PDF, kept in the
 1. Tap **+ New event**. Enter the name, date and place, pick a template or an earlier event under *Start from*, and adjust the slots. Each slot is a job, a start and finish time, and how many people.
    - **Running later or earlier?** Change the start of the day's *first* slot and every other slot that day moves by the same amount, keeping its length. Changing any other slot changes only that slot.
    - **Time checks:** a slot that finishes before it starts can't be saved. Overlaps, gaps and duplicates within the same job show a warning with **Save anyway**, because they're often planned. Different jobs at the same time are never flagged.
-   - **People already booked:** if their slot moves, the page lists them before saving and can draft a "your time has changed" email to each one. Drafts go to the Secretary's Gmail Drafts; nothing is sent automatically.
+   - **People already booked:** if their slot moves, the page lists them before saving. With **Email them about the new time** ticked (the default), each volunteer gets one email straight away listing their new and old times, with their cancel link. Only upcoming slots and active sign-ups are emailed. If an email can't be sent, the page says so, so the coordinator can tell that person another way. The coordinator's next daily update records how many were sent.
 2. Tap **Publish sign-up form**, then **Copy message to share** and paste it into WhatsApp or the newsletter.
 3. Open the event any time to see who's in each slot. Use **+ Add someone**, **Remove**, **Add to slot** (for the waitlist) or **Close sign-ups**.
 4. After the event, tap **Didn't come?** for anyone who couldn't make it. Thank-you notes are prepared automatically for the Secretary to send.
@@ -129,6 +129,7 @@ T-shirt size
 | Setting | Options |
 |---|---|
 | Send sign-up confirmations | Yes / No |
+| Send time-change emails | Yes / No (No hides the option on the coordinator page) |
 | Notify coordinator of each sign-up | Yes / No (waitlist and WWC problems are always flagged) |
 | Reminder emails | Off / Draft / Send |
 | Auto-draft thank-yous | Yes / No |

@@ -101,6 +101,7 @@ const DEFAULT_SETTINGS = [
   ['WWC required for types', '', 'Blank = no form asks for a WWC card (volunteers don\'t need one; only paid canteen staff do, and they aren\'t rostered here). If that ever changes, list the event types whose forms should ask, e.g. Canteen.'],
   ['WWC warning days', '60', 'Warn this many days before a WWC card on file expires.'],
   ['Send sign-up confirmations', 'Yes', 'Yes = each volunteer gets an automatic email listing their slots.'],
+  ['Send time-change emails', 'Yes', 'Yes = when a coordinator moves a slot people are booked on, those volunteers are emailed their new time straight away (the coordinator can untick it for one save). No = never, and the option is hidden on the coordinator page.'],
   ['Notify coordinator of each sign-up', 'No', 'Yes = the event coordinator gets an email for every sign-up. (They get a daily update anyway – see Coordinator updates.)'],
   ['Coordinator page address', '', 'The Web app URL from Apps Script › Deploy (ends in /exec). Needed for coordinator links and volunteers\' cancel links. See README.'],
   ['Coordinator updates', 'Yes', 'Yes = each coordinator gets one short email a day, only when something changed (new sign-ups, cancellations) or spots are still open close to the day.'],
@@ -927,10 +928,15 @@ function processSignup_(ev, ans, timestamp) {
       sumHours_(results.filter(r => ACTIVE.indexOf(r.status) >= 0).map(r => hoursBetween_(r.s.start, r.s.end))), st);
     vars.ManageLine = manageLine_(token);
     const m = composeEmail_('You\'re on the roster', st['Confirmation subject'], st['Confirmation body'], vars, shifts, ev, st);
-    MailApp.sendEmail(clean_({
-      to: email, subject: m.subject, body: m.text, htmlBody: m.html, inlineImages: m.inlineImages,
-      name: fromName_(st), replyTo: replyTo_(ev, st),
-    }));
+    try {
+      MailApp.sendEmail(clean_({
+        to: email, subject: m.subject, body: m.text, htmlBody: m.html, inlineImages: m.inlineImages,
+        name: fromName_(st), replyTo: replyTo_(ev, st),
+      }));
+    } catch (e) {
+      // A bad address mustn't undo or hide a sign-up that's already saved.
+      Logger.log(`Confirmation email to ${email} for ${ev.id} failed: ${e && e.message}`);
+    }
   }
 
   // Alerts for the coordinator / admin.
@@ -1318,6 +1324,7 @@ function statusNote_(status) {
 
 /** One shift as a plain-text line, with any status note. */
 function shiftText_(s) {
+  if (s.text) return s.text; // a line written for one email (e.g. "now … (was …)")
   if (s.brief) return `• ${s.role}`; // group reminders: date and time are already in the sentence
   return shiftLine_(s) + (s.note ? ` – ${s.note}` : '');
 }
@@ -1640,6 +1647,7 @@ function cpLoad(key) {
     events: mine, templates: templateNames_(), pastEvents: past,
     logo: logo ? 'data:' + logo.getContentType() + ';base64,' + Utilities.base64Encode(logo.getBytes()) : '',
     pcName: st['P&C name'],
+    timeChangeEmails: isYes_(st['Send time-change emails']),
   };
 }
 
@@ -1735,8 +1743,8 @@ function cpSaveEvent(key, d) {
     }
     replaceSlots_(getEvent_(id), slots, d.date);
     buildForm_(id);
-    const notices = d.notifyMoved ? draftTimeChangeEmails_(getEvent_(id), before) : 0;
-    return Object.assign(eventDetail_(getEvent_(id)), { notices });
+    const mail = d.notifyMoved ? sendTimeChangeEmails_(getEvent_(id), before) : { sent: 0, failed: 0 };
+    return Object.assign(eventDetail_(getEvent_(id)), { emailed: mail.sent, emailFailed: mail.failed });
   } finally {
     lock.releaseLock();
   }
@@ -1962,10 +1970,13 @@ function coordinatorUpdates_(st) {
       .map(s => ({ s, left: s.spots - (counts[s.n] || 0) }));
     const daysTo = daysBetween_(today, dateKey_(ev.date));
     const nudge = open.length && daysTo === nudgeDays;
-    if (!fresh.length && !gone.length && !nudge) return;
+    const moved = timeChangesSince_(ev.id, since);
+    if (!fresh.length && !gone.length && !nudge && !moved.sent && !moved.failed) return;
     const lines = [`${ev.name} – ${fmtDate_(ev.date, 'EEE d MMM')}`];
     if (fresh.length) lines.push('New: ' + fresh.map(x => `${x.r['Name']} (${x.r['Role / task']}${x.r['Status'] === 'Waitlist' ? ', waitlist' : ''})`).join(', '));
     if (gone.length) lines.push('Cancelled: ' + gone.map(x => `${x.r['Name']} (${x.r['Role / task']})`).join(', '));
+    if (moved.sent) lines.push(`Time change emails sent to ${moved.sent} volunteer${moved.sent === 1 ? '' : 's'} for ${ev.name}.`);
+    if (moved.failed) lines.push(`${moved.failed} time change email${moved.failed === 1 ? '' : 's'} couldn't be sent, so please check those volunteers know.`);
     lines.push(open.length ? 'Still open: ' + open.map(o => `${o.s.role} ${timeRange_(o.s)} – ${o.left}`).join('; ') : 'Every slot is filled.');
     if (nudge) lines.push(`\nStill need a few more? Here's a message you can paste into WhatsApp or the newsletter:\n\n${shareText_(ev, st)}`);
     const k = ev.coordinatorEmail.toLowerCase();
@@ -2044,34 +2055,72 @@ function duration_(mins) {
   return [h ? `${h} hr` : '', m ? `${m} min` : ''].filter(String).join(' ') || '0 min';
 }
 
-/** After a coordinator moves booked slots: a "your time has changed" draft per volunteer (never sent). */
-function draftTimeChangeEmails_(ev, before) {
+const TIME_CHANGE_SUBJECT = 'Time change: {EventName}';
+const TIME_CHANGE_BODY = 'Hi {FirstName},\n\nA quick heads-up that the time for your spot at {EventName}{OnDate} has changed:\n{Shifts}\n\n{ManageLine}\n\nThanks,\n{SenderName}';
+
+/**
+ * After a coordinator moves booked slots: one email per volunteer with their new time(s).
+ * Only active sign-ups, only slots that haven't happened, only if the times really changed.
+ * Sent like sign-up confirmations (branded when "Branded emails" is Yes). Returns { sent, failed }.
+ */
+function sendTimeChangeEmails_(ev, before) {
   const st = settings_();
+  const result = { sent: 0, failed: 0 };
+  if (!isYes_(st['Send time-change emails'])) return result;
+  const today = todayKey_();
   const now = {};
   slots_(ev).forEach(s => { now[s.n] = s; });
   const people = {};
   signupsFor_(ev.id).forEach(x => {
-    if (ACTIVE.indexOf(String(x.r['Status'])) < 0 || !x.r['Email']) return;
+    if (ACTIVE.indexOf(String(x.r['Status'])) < 0 || !String(x.r['Email']).trim()) return;
     const n = Number(x.r['Slot #']), was = before[n], is = now[n];
     if (!was || !is) return;
     if (was.start === is.start && was.end === is.end && dateKey_(was.date) === dateKey_(is.date)) return;
+    if (dateKey_(is.date) < today) return; // already happened
     const em = String(x.r['Email']).trim().toLowerCase();
-    const p = people[em] = people[em] || { name: String(x.r['Name']), token: String(x.r['Manage token'] || ''), lines: [] };
+    const p = people[em] = people[em] || { name: String(x.r['Name']), token: String(x.r['Manage token'] || ''), shifts: [] };
     const sameDay = dateKey_(was.date) === dateKey_(is.date);
-    p.lines.push(`• ${is.role}: now ${sameDay ? '' : fmtDate_(is.date, 'EEE d MMM') + ', '}${timeRange_(is)} (was ${sameDay ? '' : fmtDate_(was.date, 'EEE d MMM') + ', '}${timeRange_(was)})`);
+    const wasText = `${sameDay ? '' : fmtDate_(was.date, 'EEE d MMM') + ', '}${timeRange_(was)}`;
+    p.shifts.push(Object.assign({}, is, {
+      text: `• ${is.role}: now ${sameDay ? '' : fmtDate_(is.date, 'EEE d MMM') + ', '}${timeRange_(is)} (was ${wasText})`,
+      note: `Was ${wasText}`,
+    }));
   });
-  let n = 0;
   Object.keys(people).forEach(em => {
     const p = people[em];
-    const first = p.name.trim().split(/\s+/)[0] || 'there';
-    const sender = ev.coordinator || st['Sender name'] || 'The P&C team';
-    GmailApp.createDraft(em, `Time change: ${ev.name}`,
-      `Hi ${first},\n\nA quick heads-up that the time for your spot at ${ev.name}${ev.date ? ' on ' + fmtDate_(ev.date, 'EEEE d MMMM') : ''} has changed:\n${p.lines.join('\n')}\n\n` +
-      `${manageLine_(p.token)}\n\nThanks,\n${sender}`,
-      clean_({ name: fromName_(st), replyTo: replyTo_(ev, st) }));
-    n++;
+    try {
+      const vars = templateVars_(ev, p.name, p.shifts.map(shiftText_), 0, st);
+      vars.OnDate = ev.date ? ' on ' + fmtDate_(ev.date, 'EEEE d MMMM') : '';
+      vars.ManageLine = manageLine_(p.token);
+      const m = composeEmail_('Your time has changed', TIME_CHANGE_SUBJECT, TIME_CHANGE_BODY, vars, p.shifts, ev, st);
+      MailApp.sendEmail(clean_({
+        to: em, subject: m.subject, body: m.text, htmlBody: m.html, inlineImages: m.inlineImages,
+        name: fromName_(st), replyTo: replyTo_(ev, st),
+      }));
+      result.sent++;
+    } catch (e) {
+      result.failed++;
+      Logger.log(`Time change email to ${em} for ${ev.id} failed: ${e && e.message}`);
+    }
   });
-  return n;
+  if (result.sent || result.failed) logTimeChange_(ev, result);
+  return result;
+}
+
+/** Keeps a short record so the coordinator's daily update can mention the emails. */
+function logTimeChange_(ev, result) {
+  const props = PropertiesService.getDocumentProperties();
+  const cutoff = Date.now() - 3 * 24 * 3600 * 1000;
+  const list = JSON.parse(props.getProperty('timeChangeLog') || '[]').filter(x => x.at >= cutoff);
+  list.push({ at: Date.now(), eventId: ev.id, sent: result.sent, failed: result.failed });
+  props.setProperty('timeChangeLog', JSON.stringify(list));
+}
+
+/** Time-change emails for one event since a time, totalled. */
+function timeChangesSince_(eventId, since) {
+  const list = JSON.parse(PropertiesService.getDocumentProperties().getProperty('timeChangeLog') || '[]');
+  return list.filter(x => x.eventId === eventId && x.at >= since.getTime())
+    .reduce((t, x) => ({ sent: t.sent + x.sent, failed: t.failed + x.failed }), { sent: 0, failed: 0 });
 }
 
 /* ============================== Pure helpers (unit-tested) ============================== */

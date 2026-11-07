@@ -446,7 +446,7 @@ function save() {
     ${issues.warnings.length ? `<h3>Check these times</h3><ul>${issues.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
       <p class="small muted">These are only warnings. Overlaps and breaks are fine if you planned them.</p>` : ''}
     ${moved.length ? `<h3>People already booked will move</h3><ul>${moved.map(m => `<li>${esc(m)}</li>`).join('')}</ul>
-      <label class="check"><input type="checkbox" id="notifyMoved" checked> Draft a "your time has changed" email to them (saved in the Secretary's Gmail Drafts, not sent)</label>` : ''}
+      ${S.home.timeChangeEmails ? '<label class="check"><input type="checkbox" id="notifyMoved" checked> Email them about the new time</label>' : ''}` : ''}
     <div class="row"><button onclick="doSave(!!($('notifyMoved') && $('notifyMoved').checked))">${issues.warnings.length ? 'Save anyway' : 'Save'}</button><button class="ghost" onclick="closeConfirm()">Go back</button></div>`;
   $('toast').hidden = true;
   $('confirm').hidden = false;
@@ -462,8 +462,11 @@ async function doSave(notifyMoved) {
   });
   S.draft = null; S.runOpen = false;
   renderEvent(); window.scrollTo(0, 0);
-  const notes = S.ev.notices ? ` ${S.ev.notices} "time has changed" email${S.ev.notices === 1 ? ' is' : 's are'} in the Secretary's Gmail Drafts.` : '';
-  toast((isNew ? 'Your sign-up form is live. Copy the link or the message to share it.' : 'Saved. The sign-up form is updated too.') + notes);
+  const sent = S.ev.emailed || 0, failed = S.ev.emailFailed || 0;
+  let msg = isNew ? 'Your sign-up form is live. Copy the link or the message to share it.' : (sent || failed ? 'Saved.' : 'Saved. The sign-up form is updated too.');
+  if (sent) msg += ` ${sent} volunteer${sent === 1 ? '' : 's'} emailed about their new time.`;
+  if (failed) msg += ` ${failed} email${failed === 1 ? '' : 's'} couldn't be sent, so please let them know.`;
+  toast(msg, failed > 0);
 }
 
 loadHome();
