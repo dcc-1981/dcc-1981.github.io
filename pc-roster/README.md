@@ -174,6 +174,7 @@ Forms created before you set the template keep Google's default look. To update 
 ## Good to know
 
 - **Sign-up forms are open to anyone with the link. No Google account needed.** Setup / repair and Refresh switch off Google sign-in, Google's own email collection and the one-response limit on every form. If they say *"Sign-up forms are restricted to P&C accounts"*, ask the Workspace admin to allow sharing forms outside the organisation.
+- **Only the owner can edit a sign-up form.** Responses include volunteers' contact details, so the same steps remove any *anyone* or *domain* permission that can edit the form, and keep the view-only *anyone* permission that lets parents respond. People added to a form by name aren't touched. For the most exact clean-up, switch on the Drive API in Apps Script (**Services › + › Drive API › Add**). Without it, the form's link sharing is changed from *can edit* to *can view*.
 
 - **Privacy:** the sheet holds families' contact details. Share it only with committee members who need it, and don't make it public.
 - **Don't rename** the tabs, the column headings, or the questions on generated forms. The script finds things by name. Adding your own extra columns to the right is fine.

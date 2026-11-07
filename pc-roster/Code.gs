@@ -759,9 +759,49 @@ function openFormToEveryone_(form) {
   }
   try { form.setCollectEmail(false); } catch (e) { Logger.log('setCollectEmail(false) failed for form ' + form.getId() + ': ' + (e && e.message)); }
   try { form.setLimitOneResponsePerUser(false); } catch (e) { Logger.log('setLimitOneResponsePerUser(false) failed for form ' + form.getId() + ': ' + (e && e.message)); }
+  lockFormEditing_(form.getId());
   const props = PropertiesService.getDocumentProperties();
   if (ok) props.deleteProperty('formAccessProblem'); else props.setProperty('formAccessProblem', FORM_ACCESS_PROBLEM);
   return ok;
+}
+
+const EDIT_ROLES = ['writer', 'fileOrganizer', 'organizer'];
+
+/**
+ * Responses hold volunteers' contact details, so only the owner (and anyone added by name)
+ * may edit a form. Removes every "domain" or "anyone" permission that can edit, and keeps
+ * the anyone / reader / published permission that lets parents respond.
+ * Uses the Drive API (Drive advanced service) when it's switched on, for an exact per-permission
+ * change; otherwise falls back to DriveApp's link-sharing setting (can edit → can view).
+ * Returns the number of permissions tightened.
+ */
+function lockFormEditing_(formId) {
+  let changed = 0;
+  try {
+    if (typeof Drive !== 'undefined' && Drive.Permissions) {
+      const res = Drive.Permissions.list(formId, { supportsAllDrives: true, fields: 'permissions(id,type,role,view)' });
+      ((res && res.permissions) || []).forEach(p => {
+        if ((p.type === 'domain' || p.type === 'anyone') && EDIT_ROLES.indexOf(p.role) >= 0) {
+          Drive.Permissions.remove(formId, p.id, { supportsAllDrives: true });
+          Logger.log(`Removed ${p.type} ${p.role} permission from form ${formId}`);
+          changed++;
+        }
+      });
+      return changed;
+    }
+    const file = DriveApp.getFileById(formId);
+    const access = file.getSharingAccess();
+    const perm = file.getSharingPermission();
+    const canEdit = [DriveApp.Permission.EDIT, DriveApp.Permission.ORGANIZER, DriveApp.Permission.FILE_ORGANIZER].indexOf(perm) >= 0;
+    if (access !== DriveApp.Access.PRIVATE && canEdit) {
+      file.setSharing(access, DriveApp.Permission.VIEW);
+      Logger.log(`Link sharing on form ${formId} changed from ${perm} to VIEW (${access})`);
+      changed++;
+    }
+  } catch (e) {
+    Logger.log('Could not check editing permissions on form ' + formId + ': ' + (e && e.message));
+  }
+  return changed;
 }
 
 function isWorkspaceAccount_() {
