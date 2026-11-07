@@ -44,7 +44,7 @@ New to this? Ask the Secretary for the illustrated setup guide (PDF, kept in the
 8. **Give coordinators their links.** Add each coordinator's name and email on the **Coordinators** tab, then click **P&C Roster › Coordinator links & welcome emails**. It makes their personal links and drafts a short welcome email to each person for you to send. To stop a link working, set *Active* to **No**.
 9. Make the branded master form (once). See *P&C branding* below.
 
-**When the code is updated:** paste the new files in as before, then **Deploy › Manage deployments**, click the pencil, set *Version* to **New version** and click **Deploy**. The page address stays the same, so coordinators' links keep working. Then run **Setup / repair**.
+**When the code is updated:** paste the new files in as before (including `appsscript.json` if it changed), then **Deploy › Manage deployments**, click the pencil, set *Version* to **New version** and click **Deploy**. The page address stays the same, so coordinators' links keep working. Then run **Setup / repair**.
 
 > Run Setup from the account that should own the drafts and send the emails, ideally a shared P&C account rather than a personal one. The daily check and the thank-you drafts run as that account.
 
@@ -173,7 +173,9 @@ Forms created before you set the template keep Google's default look. To update 
 
 ## Good to know
 
-- **Sign-up forms are open to anyone with the link. No Google account needed.** Setup / repair and Refresh switch off Google sign-in, Google's own email collection and the one-response limit on every form. If they say *"Sign-up forms are restricted to P&C accounts"*, ask the Workspace admin to allow sharing forms outside the organisation.
+- **Sign-up forms are open to anyone with the link. No Google account needed.** Whenever a form is created or updated, and on every Setup / repair and Refresh, the roster publishes the form and sets its responders to *Anyone with the link* (a Drive permission: anyone · reader · published). It also switches off the older sign-in setting, Google's own email collection and the one-response limit. This needs the **Drive API** service, which `appsscript.json` switches on. Paste in the latest copy of that file when you update.
+  - If Setup / repair or Refresh says *"Sign-up forms are limited to P&C accounts. Allow forms to be shared outside the organisation in the Google Admin console."*, the wembleypc.org.au admin needs to allow it (Admin console › Apps › Google Workspace › Drive and Docs › Sharing settings, and Google Forms settings).
+  - To check, open a form link in a private or incognito window. It should open without asking you to sign in.
 - **Only the owner can edit a sign-up form.** Responses include volunteers' contact details, so the same steps remove any *anyone* or *domain* permission that can edit the form, and keep the view-only *anyone* permission that lets parents respond. People added to a form by name aren't touched. For the most exact clean-up, switch on the Drive API in Apps Script (**Services › + › Drive API › Add**). Without it, the form's link sharing is changed from *can edit* to *can view*.
 
 - **Privacy:** the sheet holds families' contact details. Share it only with committee members who need it, and don't make it public.

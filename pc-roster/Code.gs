@@ -216,7 +216,7 @@ function menuSaveTemplate() {
 
 function menuRefreshAll() {
   const issues = refreshAll_();
-  const formProblem = issues[0] === FORM_ACCESS_PROBLEM ? issues.shift() : '';
+  const formProblem = issues[0] === FORM_ACCESS_PROBLEM || issues[0] === DRIVE_SERVICE_MISSING ? issues.shift() : '';
   if (formProblem || issues.length) {
     alert_('Counts, forms and stats refreshed.' + (formProblem ? `\n\n⚠ ${formProblem}` : '') +
       (issues.length ? '\n\nSome slot times look worth a check (these are warnings only, nothing was changed):\n\n' + issues.join('\n\n') : ''));
@@ -677,7 +677,7 @@ function buildForm_(eventId) {
       : 'Thank you! The coordinator will be in touch.')
     .setShowLinkToRespondAgain(false)
     .setAllowResponseEdits(false);
-  openFormToEveryone_(form);
+  openFormToEveryone_(form, true);
 
   const needsWwc = wwcRequired_(ev, st);
 
@@ -743,26 +743,65 @@ function buildForm_(eventId) {
   return { created, url: form.getPublishedUrl() };
 }
 
-const FORM_ACCESS_PROBLEM = 'Sign-up forms are restricted to P&C accounts. Ask the Workspace admin to allow sharing forms outside the organisation.';
+const FORM_ACCESS_PROBLEM = 'Sign-up forms are limited to P&C accounts. Allow forms to be shared outside the organisation in the Google Admin console.';
+const DRIVE_SERVICE_MISSING = 'The Drive API service is off, so sign-up forms may only be open to P&C accounts. In Apps Script, paste in the latest appsscript.json (or Services › + › Drive API › Add), then run Setup / repair again.';
 
 /**
- * Parents must be able to sign up without a Google account. Each setting is tried on its own:
- * setRequireLogin always throws on a free Gmail account (nothing to fix there), but on a
- * Workspace account a failure means the domain still restricts forms – that gets reported.
- * Returns false only for that Workspace case.
+ * Parents must be able to sign up without a Google account.
+ * Under Google's current publishing model, who can respond is a Drive permission on the form:
+ * "Anyone with the link" = type anyone, role reader, view published (Drive advanced service).
+ * Also: the form is published (which turns responses on; refreshEventForm_ then opens or closes
+ * it for full or closed events), and the older settings are switched off for forms made before
+ * that model. Every step is in its own try/catch.
+ * Returns '' when it worked, or the message explaining why parents may be blocked.
+ * With record = true (a single form being built) the message is also stored for Setup / Refresh.
  */
-function openFormToEveryone_(form) {
-  let ok = true;
-  try { form.setRequireLogin(false); } catch (e) {
-    Logger.log('setRequireLogin(false) failed for form ' + form.getId() + ': ' + (e && e.message));
-    if (isWorkspaceAccount_()) ok = false;
+function openFormToEveryone_(form, record) {
+  const id = form.getId();
+  let ok = true, problem = FORM_ACCESS_PROBLEM;
+  // 1. Published.
+  try {
+    if (typeof form.isPublished === 'function' && !form.isPublished()) form.setPublished(true);
+  } catch (e) {
+    Logger.log('setPublished(true) failed for form ' + id + ': ' + (e && e.message));
+    ok = false;
   }
-  try { form.setCollectEmail(false); } catch (e) { Logger.log('setCollectEmail(false) failed for form ' + form.getId() + ': ' + (e && e.message)); }
-  try { form.setLimitOneResponsePerUser(false); } catch (e) { Logger.log('setLimitOneResponsePerUser(false) failed for form ' + form.getId() + ': ' + (e && e.message)); }
-  lockFormEditing_(form.getId());
-  const props = PropertiesService.getDocumentProperties();
-  if (ok) props.deleteProperty('formAccessProblem'); else props.setProperty('formAccessProblem', FORM_ACCESS_PROBLEM);
-  return ok;
+  // 2. Responders: anyone with the link.
+  const responders = ensureAnyoneResponder_(id); // true, false (refused), or null (no Drive service)
+  if (responders === false) ok = false;
+  // 3. Older forms: the "restrict to domain" sign-in setting.
+  try { form.setRequireLogin(false); } catch (e) {
+    Logger.log('setRequireLogin(false) failed for form ' + id + ': ' + (e && e.message));
+    // Expected on free Gmail accounts and on forms using the new model. Only a sign of trouble when
+    // the responder permission couldn't be confirmed either.
+    if (responders === null && isWorkspaceAccount_()) { ok = false; problem = DRIVE_SERVICE_MISSING; }
+  }
+  // 4. We ask for email ourselves; a one-response limit would force a sign-in.
+  try { form.setCollectEmail(false); } catch (e) { Logger.log('setCollectEmail(false) failed for form ' + id + ': ' + (e && e.message)); }
+  try { form.setLimitOneResponsePerUser(false); } catch (e) { Logger.log('setLimitOneResponsePerUser(false) failed for form ' + id + ': ' + (e && e.message)); }
+  lockFormEditing_(id);
+  const result = ok ? '' : problem;
+  if (record && result) PropertiesService.getDocumentProperties().setProperty('formAccessProblem', result);
+  return result;
+}
+
+/** Adds the "anyone with the link can respond" permission if it isn't there. */
+function ensureAnyoneResponder_(formId) {
+  if (typeof Drive === 'undefined' || !Drive.Permissions) {
+    Logger.log('Drive advanced service is off; cannot set responders on form ' + formId);
+    return null;
+  }
+  try {
+    const res = Drive.Permissions.list(formId, { supportsAllDrives: true, includePermissionsForView: 'published', fields: 'permissions(id,type,role,view)' });
+    const perms = (res && res.permissions) || [];
+    if (perms.some(p => p.type === 'anyone' && p.role === 'reader' && p.view === 'published')) return true;
+    Drive.Permissions.create({ type: 'anyone', role: 'reader', view: 'published', allowFileDiscovery: false }, formId, { supportsAllDrives: true });
+    Logger.log('Responders on form ' + formId + ' set to anyone with the link');
+    return true;
+  } catch (e) {
+    Logger.log('Could not open form ' + formId + ' to anyone with the link: ' + (e && e.message));
+    return false;
+  }
 }
 
 const EDIT_ROLES = ['writer', 'fileOrganizer', 'organizer'];
@@ -779,7 +818,7 @@ function lockFormEditing_(formId) {
   let changed = 0;
   try {
     if (typeof Drive !== 'undefined' && Drive.Permissions) {
-      const res = Drive.Permissions.list(formId, { supportsAllDrives: true, fields: 'permissions(id,type,role,view)' });
+      const res = Drive.Permissions.list(formId, { supportsAllDrives: true, includePermissionsForView: 'published', fields: 'permissions(id,type,role,view)' });
       ((res && res.permissions) || []).forEach(p => {
         if ((p.type === 'domain' || p.type === 'anyone') && EDIT_ROLES.indexOf(p.role) >= 0) {
           Drive.Permissions.remove(formId, p.id, { supportsAllDrives: true });
@@ -811,13 +850,14 @@ function isWorkspaceAccount_() {
 
 /** Re-applies open access to every event's form (Setup / repair and Refresh). Returns the problem message, or ''. */
 function openAllForms_() {
-  let ok = true;
+  let problem = '';
   events_().forEach(ev => {
     if (!ev.formId) return;
-    try { ok = openFormToEveryone_(FormApp.openById(ev.formId)) && ok; } catch (e) { Logger.log('Could not open form for ' + ev.id + ': ' + (e && e.message)); }
+    try { problem = openFormToEveryone_(FormApp.openById(ev.formId), false) || problem; } catch (e) { Logger.log('Could not open form for ' + ev.id + ': ' + (e && e.message)); }
   });
-  if (ok) PropertiesService.getDocumentProperties().deleteProperty('formAccessProblem');
-  return PropertiesService.getDocumentProperties().getProperty('formAccessProblem') || '';
+  const props = PropertiesService.getDocumentProperties();
+  if (problem) props.setProperty('formAccessProblem', problem); else props.deleteProperty('formAccessProblem');
+  return problem;
 }
 
 /** Rebuilds slot choices (with spots left) and opens/closes the form. */
