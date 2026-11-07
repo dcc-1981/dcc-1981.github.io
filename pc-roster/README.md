@@ -13,7 +13,7 @@ A volunteer roster that runs from one Google Sheet. Event coordinators use a sim
 | **Templates** | Start a new event from a saved template (sausage sizzle, disco, canteen week…) or copy any past event. Slot dates move to the new date automatically. Any event can be saved as a template. |
 | **Quick shifts** | "Add shifts" turns a block of time into shifts, e.g. BBQ 8am–2pm in 2-hour shifts with 3 people each. |
 | **Custom questions** | Each event can ask extra questions, e.g. "Can you bring a plate? [Yes\|No]". |
-| **WWC (canteen only)** | Only canteen forms ask for a Working with Children card. A card on file is reused next time. Missing or expired cards are marked *Pending WWC* and flagged to you. Event forms never ask. |
+| **WWC (off)** | Volunteers don't need a Working with Children card (only paid canteen staff do, and they aren't rostered here), so no form asks for one. It can be switched on per event type if the rules ever change. |
 | **Hours** | Worked out from slot times. You can change *Actual hours* or set *Attended = No* before finishing an event. |
 | **Thank-yous** | After each event, a short, plain thank-you note is saved in Gmail Drafts for each volunteer. It's signed by the event coordinator and reads like a personal email. Nothing is sent without you. |
 | **Stats** | Hours, unique volunteers and shifts by year, by event type and by event. Each volunteer's running total is on the Volunteers tab. |
@@ -99,11 +99,9 @@ Group emails are addressed to the *Public email* (hello@wembleypc.org.au) with v
 
 **Sending from hello@:** drafts are saved in the account that ran Setup. To send them *from* hello@wembleypc.org.au, add it as a "Send mail as" address in that Gmail account, then pick it in the From field before sending.
 
-### Canteen and WWC
-- Use the event type **Canteen** (e.g. from the *Canteen week* template, which covers Monday to Friday). Only those forms ask for a WWC card number and expiry date.
-- If a volunteer has no card on file, or it expires before their shift, the sign-up is marked **Pending WWC**, and you and the coordinator get an email. Once it's checked, change the status to **Confirmed**.
-- The daily summary lists cards that have expired or will expire within *WWC warning days*.
-- To require WWC for other types too (e.g. *Uniform shop*), add them to *WWC required for types* in Settings.
+### Working with Children (WWC) checks
+- Off by default. Volunteers at P&C events and in the canteen don't need a WWC card; only paid canteen staff do, and they aren't rostered through this tool.
+- If that ever changes, list the event types in *WWC required for types* in Settings (e.g. `Canteen`). Those forms will then ask for a card number and expiry date. A missing or expired card marks the sign-up **Pending WWC** and flags it to you and the coordinator, and the daily summary lists cards that are about to expire.
 
 ## Customising
 
@@ -169,7 +167,7 @@ Forms created before you set the template keep Google's default look. To update 
 
 ## Good to know
 
-- **Privacy:** the sheet holds families' contact details and WWC numbers. Share it only with committee members who need it, and don't make it public.
+- **Privacy:** the sheet holds families' contact details. Share it only with committee members who need it, and don't make it public.
 - **Don't rename** the tabs, the column headings, or the questions on generated forms. The script finds things by name. Adding your own extra columns to the right is fine.
 - Each form saves raw responses to a hidden tab called *Responses EV-xxx*. Leave these in place. The tidy copy is on Sign-ups.
 - Hours count once a shift's date has passed, unless *Attended = No*.

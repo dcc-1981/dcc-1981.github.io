@@ -98,7 +98,7 @@ const DEFAULT_SETTINGS = [
   ['Form template', '', 'Drive link to a blank Google Form with the P&C theme set (see README). New sign-up forms copy its look. Blank = Google\'s default theme.'],
   ['Admin email', '', 'Gets alerts (waitlists, WWC issues, daily summary). Blank = the account that ran Setup.'],
   ['Event types', 'Event, Canteen, Uniform shop, Working bee', 'Comma-separated list for the Type drop-down on the Events tab.'],
-  ['WWC required for types', 'Canteen', 'Event types whose forms ask for a WWC card (comma-separated). Other events never ask.'],
+  ['WWC required for types', '', 'Blank = no form asks for a WWC card (volunteers don\'t need one; only paid canteen staff do, and they aren\'t rostered here). If that ever changes, list the event types whose forms should ask, e.g. Canteen.'],
   ['WWC warning days', '60', 'Warn this many days before a WWC card on file expires.'],
   ['Send sign-up confirmations', 'Yes', 'Yes = each volunteer gets an automatic email listing their slots.'],
   ['Notify coordinator of each sign-up', 'No', 'Yes = the event coordinator gets an email for every sign-up. (They get a daily update anyway – see Coordinator updates.)'],
