@@ -9,7 +9,7 @@ A volunteer roster that runs from one Google Sheet. Event coordinators use a sim
 | **Coordinator page** | Each coordinator gets a personal link. From it they create events (three steps, or copy last year's), publish the sign-up form, copy a ready-made message for WhatsApp or the newsletter, see who's in each slot, add walk-ups, remove people, move people off the waitlist, and close sign-ups. They only see their own events. |
 | **Volunteer self-service** | Confirmations and reminders include a "Cancel or check my spot" link. Cancelling reopens the spot on the form and tells the coordinator straight away. |
 | **Coordinator updates** | One short email a day, only when something has changed (new sign-ups, cancellations). If spots are still open a few days before the event, the email includes a message ready to share. |
-| **Sign-ups** | One Google Form per event, built from that event's slots. Each slot shows how many spots are left. Full slots disappear from the form, and the form closes itself when everything is full. |
+| **Sign-ups** | Sign-up forms are open to anyone with the link. No Google account needed. One Google Form per event, built from that event's slots. Each slot shows how many spots are left. Full slots disappear from the form, and the form closes itself when everything is full. |
 | **Templates** | Start a new event from a saved template (a fresh setup includes *Showcase cake stall* and *Showcase sausage sizzle*) or copy any past event. Slot dates move to the new date automatically. Any event can be saved as a template. |
 | **Quick shifts** | "Add shifts" turns a block of time into shifts, e.g. BBQ 8am–2pm in 2-hour shifts with 3 people each. |
 | **Custom questions** | Each event can ask extra questions, e.g. "Can you bring a plate? [Yes\|No]". |
@@ -172,6 +172,8 @@ Forms created before you set the template keep Google's default look. To update 
 **Not covered yet.** The Hungry Lion canteen has its own orange-and-cream sub-brand. Canteen emails and forms currently use the main P&C look.
 
 ## Good to know
+
+- **Sign-up forms are open to anyone with the link. No Google account needed.** Setup / repair and Refresh switch off Google sign-in, Google's own email collection and the one-response limit on every form. If they say *"Sign-up forms are restricted to P&C accounts"*, ask the Workspace admin to allow sharing forms outside the organisation.
 
 - **Privacy:** the sheet holds families' contact details. Share it only with committee members who need it, and don't make it public.
 - **Don't rename** the tabs, the column headings, or the questions on generated forms. The script finds things by name. Adding your own extra columns to the right is fine.

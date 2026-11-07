@@ -216,7 +216,11 @@ function menuSaveTemplate() {
 
 function menuRefreshAll() {
   const issues = refreshAll_();
-  if (issues.length) alert_('Counts, forms and stats refreshed.\n\nSome slot times look worth a check (these are warnings only, nothing was changed):\n\n' + issues.join('\n\n'));
+  const formProblem = issues[0] === FORM_ACCESS_PROBLEM ? issues.shift() : '';
+  if (formProblem || issues.length) {
+    alert_('Counts, forms and stats refreshed.' + (formProblem ? `\n\n⚠ ${formProblem}` : '') +
+      (issues.length ? '\n\nSome slot times look worth a check (these are warnings only, nothing was changed):\n\n' + issues.join('\n\n') : ''));
+  }
   else toast_('Counts, forms and stats refreshed.');
 }
 
@@ -276,11 +280,13 @@ function setupRoster() {
     alert_(`Heads up: this sheet's time zone (${ss.getSpreadsheetTimeZone()}) differs from the script's (${Session.getScriptTimeZone()}).\n` +
       'Set both to Australia/Perth (File › Settings, and Apps Script › Project settings) so dates line up.');
   }
+  const formProblem = openAllForms_();
+  const formLine = formProblem ? `\n\n⚠ ${formProblem}` : '';
   if (jobsOwner) {
-    alert_(`Tabs and formatting checked.\n\nThe automatic jobs (sign-ups, emails, daily check) already run under ${jobsOwner}, so nothing else was changed. You don't need to run Setup – just use P&C Roster › New event…`);
+    alert_(`Tabs and formatting checked.\n\nThe automatic jobs (sign-ups, emails, daily check) already run under ${jobsOwner}, so nothing else was changed. You don't need to run Setup – just use P&C Roster › New event…${formLine}`);
     return;
   }
-  alert_('Setup complete.\n\nNext: P&C Roster › New event… to create your first event.\nCheck the Settings tab to adjust email wording and options.');
+  alert_('Setup complete.\n\nNext: P&C Roster › New event… to create your first event.\nCheck the Settings tab to adjust email wording and options.' + formLine);
 }
 
 const TAB_COLOURS = {
@@ -671,6 +677,7 @@ function buildForm_(eventId) {
       : 'Thank you! The coordinator will be in touch.')
     .setShowLinkToRespondAgain(false)
     .setAllowResponseEdits(false);
+  openFormToEveryone_(form);
 
   const needsWwc = wwcRequired_(ev, st);
 
@@ -734,6 +741,43 @@ function buildForm_(eventId) {
   ev.formId = form.getId();
   refreshEventForm_(ev, form);
   return { created, url: form.getPublishedUrl() };
+}
+
+const FORM_ACCESS_PROBLEM = 'Sign-up forms are restricted to P&C accounts. Ask the Workspace admin to allow sharing forms outside the organisation.';
+
+/**
+ * Parents must be able to sign up without a Google account. Each setting is tried on its own:
+ * setRequireLogin always throws on a free Gmail account (nothing to fix there), but on a
+ * Workspace account a failure means the domain still restricts forms – that gets reported.
+ * Returns false only for that Workspace case.
+ */
+function openFormToEveryone_(form) {
+  let ok = true;
+  try { form.setRequireLogin(false); } catch (e) {
+    Logger.log('setRequireLogin(false) failed for form ' + form.getId() + ': ' + (e && e.message));
+    if (isWorkspaceAccount_()) ok = false;
+  }
+  try { form.setCollectEmail(false); } catch (e) { Logger.log('setCollectEmail(false) failed for form ' + form.getId() + ': ' + (e && e.message)); }
+  try { form.setLimitOneResponsePerUser(false); } catch (e) { Logger.log('setLimitOneResponsePerUser(false) failed for form ' + form.getId() + ': ' + (e && e.message)); }
+  const props = PropertiesService.getDocumentProperties();
+  if (ok) props.deleteProperty('formAccessProblem'); else props.setProperty('formAccessProblem', FORM_ACCESS_PROBLEM);
+  return ok;
+}
+
+function isWorkspaceAccount_() {
+  const em = String(Session.getEffectiveUser().getEmail() || '');
+  return !!em && !/@(gmail|googlemail)\.com$/i.test(em);
+}
+
+/** Re-applies open access to every event's form (Setup / repair and Refresh). Returns the problem message, or ''. */
+function openAllForms_() {
+  let ok = true;
+  events_().forEach(ev => {
+    if (!ev.formId) return;
+    try { ok = openFormToEveryone_(FormApp.openById(ev.formId)) && ok; } catch (e) { Logger.log('Could not open form for ' + ev.id + ': ' + (e && e.message)); }
+  });
+  if (ok) PropertiesService.getDocumentProperties().deleteProperty('formAccessProblem');
+  return PropertiesService.getDocumentProperties().getProperty('formAccessProblem') || '';
 }
 
 /** Rebuilds slot choices (with spots left) and opens/closes the form. */
@@ -1181,8 +1225,10 @@ function dailyRosterJob() {
 
 function refreshAll_() {
   events_().forEach(ev => { if (ev.status !== 'Done' || ev.formId) refreshEventForm_(ev); });
+  const formProblem = openAllForms_();
   refreshStats_();
-  return upcomingSlotIssues_();
+  const issues = upcomingSlotIssues_();
+  return formProblem ? [formProblem].concat(issues) : issues;
 }
 
 /** Time problems in every upcoming event (including rows typed straight into the Slots tab). */
