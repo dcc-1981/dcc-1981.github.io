@@ -21,7 +21,7 @@ A volunteer roster that runs from one Google Sheet. Event coordinators use a sim
 
 ## One-time setup (about 15 minutes)
 
-New to this? Ask the Secretary for the illustrated setup guide (PDF, kept in the P&C Google Drive).
+New to this? There are two setup guides in the P&C Google Drive (Governance › 7. Claude › Handbook): **Quick Setup with Claude** (paste one prompt into Claude's Cowork and approve the Google screens; it also has a prompt for future updates) and the **manual** guide with every step, as a backup.
 
 
 1. Create a new Google Sheet in the P&C's Google account, e.g. *P&C Volunteer Roster*.
