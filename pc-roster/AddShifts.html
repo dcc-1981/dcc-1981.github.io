@@ -94,7 +94,9 @@
       google.script.run
         .withSuccessHandler(function (r) {
           b.disabled = false;
-          show('Added ' + r.added + ' shift(s).' + (r.formUpdated ? ' The sign-up form has been updated too.' : ''), true);
+          var msg = 'Added ' + r.added + ' shift(s).' + (r.formUpdated ? ' The sign-up form has been updated too.' : '');
+          if (r.warnings && r.warnings.length) msg += '\n\nWorth a check (warnings only):\n• ' + r.warnings.join('\n• ');
+          show(msg, true);
         })
         .withFailureHandler(function (e) { b.disabled = false; show(e.message, false); })
         .addShiftsFromDialog({

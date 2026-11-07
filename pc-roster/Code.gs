@@ -214,8 +214,9 @@ function menuSaveTemplate() {
 }
 
 function menuRefreshAll() {
-  refreshAll_();
-  toast_('Counts, forms and stats refreshed.');
+  const issues = refreshAll_();
+  if (issues.length) alert_('Counts, forms and stats refreshed.\n\nSome slot times look worth a check (these are warnings only, nothing was changed):\n\n' + issues.join('\n\n'));
+  else toast_('Counts, forms and stats refreshed.');
 }
 
 /* ============================== Setup ============================== */
@@ -357,24 +358,24 @@ function formatSheets_() {
 }
 
 function addSampleTemplates_() {
+  // The P&C's own Showcase templates (Templates tab, Nov 2026).
   const rows = [
-    ['Sausage sizzle', 0, '8:00 AM', '10:00 AM', 'Set up & cook', 3, 'Gazebo, BBQ and signage', ''],
-    ['Sausage sizzle', 0, '10:00 AM', '12:00 PM', 'Cook & serve', 3, '', ''],
-    ['Sausage sizzle', 0, '12:00 PM', '2:00 PM', 'Serve & pack down', 3, '', ''],
-    ['School disco', 0, '4:30 PM', '5:30 PM', 'Set up hall', 4, '', 'Can you bring a plate to share? [Yes|No]'],
-    ['School disco', 0, '5:30 PM', '7:00 PM', 'Door & sign-in', 2, '', ''],
-    ['School disco', 0, '5:30 PM', '7:00 PM', 'Snack & glow-stick stall', 4, 'Handling cash', ''],
-    ['School disco', 0, '7:00 PM', '7:45 PM', 'Pack down', 4, '', ''],
-    ['Canteen week', 0, '8:30 AM', '11:00 AM', 'Morning prep', 2, '', ''],
-    ['Canteen week', 0, '11:00 AM', '1:30 PM', 'Lunch service', 2, '', ''],
-    ['Canteen week', 1, '8:30 AM', '11:00 AM', 'Morning prep', 2, '', ''],
-    ['Canteen week', 1, '11:00 AM', '1:30 PM', 'Lunch service', 2, '', ''],
-    ['Canteen week', 2, '8:30 AM', '11:00 AM', 'Morning prep', 2, '', ''],
-    ['Canteen week', 2, '11:00 AM', '1:30 PM', 'Lunch service', 2, '', ''],
-    ['Canteen week', 3, '8:30 AM', '11:00 AM', 'Morning prep', 2, '', ''],
-    ['Canteen week', 3, '11:00 AM', '1:30 PM', 'Lunch service', 2, '', ''],
-    ['Canteen week', 4, '8:30 AM', '11:00 AM', 'Morning prep', 2, '', ''],
-    ['Canteen week', 4, '11:00 AM', '1:30 PM', 'Lunch service', 2, '', ''],
+    ['Showcase cake stall', 0, '2:30 PM', '3:15 PM', 'Set up and organise', 4, '', ''],
+    ['Showcase cake stall', 0, '3:15 PM', '4:00 PM', 'Run cake stall', 4, '', ''],
+    ['Showcase cake stall', 0, '4:00 PM', '4:45 PM', 'Run cake stall', 4, '', ''],
+    ['Showcase cake stall', 0, '4:45 PM', '5:30 PM', 'Run cake stall', 4, '', ''],
+    ['Showcase cake stall', 0, '5:30 PM', '6:00 PM', 'Pack away if needed', 2, '', ''],
+    ['Showcase sausage sizzle', 0, '2:30 PM', '3:30 PM', 'Set up and cook sausages', 5, '', ''],
+    ['Showcase sausage sizzle', 0, '3:30 PM', '4:15 PM', 'Cashier', 1, '', ''],
+    ['Showcase sausage sizzle', 0, '3:30 PM', '4:15 PM', 'Cook sausages', 2, '', ''],
+    ['Showcase sausage sizzle', 0, '3:30 PM', '4:15 PM', 'Food service', 2, '', ''],
+    ['Showcase sausage sizzle', 0, '4:15 PM', '5:00 PM', 'Cashier', 1, '', ''],
+    ['Showcase sausage sizzle', 0, '4:15 PM', '5:00 PM', 'Cook sausages', 2, '', ''],
+    ['Showcase sausage sizzle', 0, '4:15 PM', '5:00 PM', 'Food service', 2, '', ''],
+    ['Showcase sausage sizzle', 0, '5:00 PM', '5:45 PM', 'Cashier', 1, '', ''],
+    ['Showcase sausage sizzle', 0, '5:00 PM', '5:45 PM', 'Cook sausages', 2, '', ''],
+    ['Showcase sausage sizzle', 0, '5:00 PM', '5:45 PM', 'Food service', 2, '', ''],
+    ['Showcase sausage sizzle', 0, '5:45 PM', '6:30 PM', 'Help with sausage sizzle and pack down', 4, '', ''],
   ];
   appendObjects_(SH.TEMPLATES, rows.map(r => ({
     'Template': r[0], 'Day offset': r[1], 'Start': r[2], 'End': r[3], 'Role / task': r[4],
@@ -506,7 +507,8 @@ function addShiftsFromDialog(d) {
   if (ev.formId) buildForm_(ev.id);
   filterSheetByEvent_(SH.SLOTS, ev.id);
   ss_().setActiveSheet(sheet_(SH.SLOTS));
-  return { added: rows.length, formUpdated: !!ev.formId };
+  const issues = slotIssues_(slots_(ev).map(slotForCheck_));
+  return { added: rows.length, formUpdated: !!ev.formId, warnings: issues.errors.concat(issues.warnings) };
 }
 
 function saveTemplate_(eventId, name) {
@@ -1174,6 +1176,23 @@ function dailyRosterJob() {
 function refreshAll_() {
   events_().forEach(ev => { if (ev.status !== 'Done' || ev.formId) refreshEventForm_(ev); });
   refreshStats_();
+  return upcomingSlotIssues_();
+}
+
+/** Time problems in every upcoming event (including rows typed straight into the Slots tab). */
+function upcomingSlotIssues_() {
+  const today = todayKey_();
+  const out = [];
+  events_().forEach(ev => {
+    if (ev.status === 'Done' || !ev.date) return;
+    const slots = slots_(ev);
+    const last = slots.reduce((m, s) => (dateKey_(s.date) > m ? dateKey_(s.date) : m), dateKey_(ev.date));
+    if (last < today) return;
+    const issues = slotIssues_(slots.map(slotForCheck_));
+    const all = issues.errors.concat(issues.warnings);
+    if (all.length) out.push(`${ev.name} (${ev.id}):\n` + all.map(x => '• ' + x).join('\n'));
+  });
+  return out;
 }
 
 function refreshStats_() {
@@ -1695,6 +1714,7 @@ function cpSaveEvent(key, d) {
     slots.forEach(s => {
       const a = parseTime_(s.start), b = parseTime_(s.end);
       if (a == null || b == null) throw new Error(`Add a start and finish time for "${s.role}".`);
+      if (b <= a) throw new Error(`"${String(s.role).trim()}" finishes before it starts (${clock_(a, true)}–${clock_(b, true)}).`);
       if (s.spots !== '' && s.spots != null && !(Number(s.spots) >= 1)) throw new Error(`"${s.role}" needs at least 1 person (or leave it blank for no limit).`);
     });
     const st = settings_();
@@ -1704,8 +1724,10 @@ function cpSaveEvent(key, d) {
       'Extra questions': String(d.extra || '').trim(), 'Group emails': d.group ? 'Yes' : 'No',
     };
     let id = d.id;
+    let before = {};
     if (id) {
       ownEvent_(c, id);
+      slots_(getEvent_(id)).forEach(s => { before[s.n] = s; });
       updateEvent_(id, fields);
     } else {
       id = nextEventId_();
@@ -1713,7 +1735,8 @@ function cpSaveEvent(key, d) {
     }
     replaceSlots_(getEvent_(id), slots, d.date);
     buildForm_(id);
-    return eventDetail_(getEvent_(id));
+    const notices = d.notifyMoved ? draftTimeChangeEmails_(getEvent_(id), before) : 0;
+    return Object.assign(eventDetail_(getEvent_(id)), { notices });
   } finally {
     lock.releaseLock();
   }
@@ -1960,6 +1983,95 @@ function coordinatorUpdates_(st) {
         (c && url ? `\n\nSee everyone and make changes: ${url}?k=${c.key}` : '') + '\n\nThanks for organising.',
     }));
   });
+}
+
+/* ============================== Slot time checks ============================== */
+
+/** A slot in the shape slotIssues_ expects. */
+function slotForCheck_(s) {
+  return { role: s.role, date: s.date instanceof Date ? dateKey_(s.date) : String(s.date || ''), start: s.start, end: s.end };
+}
+
+/**
+ * Checks a set of slots ({role, date, start, end} with minutes).
+ * errors: a finish that isn't after its start (blocks a save).
+ * warnings: within the same role on the same day, overlaps, gaps and exact duplicates.
+ * Different roles at the same time are never flagged. Coordinator.html mirrors this logic.
+ */
+function slotIssues_(slots) {
+  const errors = [], warnings = [];
+  const groups = {};
+  (slots || []).forEach(s => {
+    const role = String(s.role || '').trim();
+    if (!role) return;
+    const a = typeof s.start === 'number' ? s.start : parseTime_(s.start);
+    const b = typeof s.end === 'number' ? s.end : parseTime_(s.end);
+    if (a == null || b == null) return;
+    if (b <= a) { errors.push(`"${role}" finishes before it starts (${clock_(a, true)}–${clock_(b, true)}).`); return; }
+    const k = role.toLowerCase() + '|' + (s.date || '');
+    (groups[k] = groups[k] || []).push({ role, a, b });
+  });
+  Object.keys(groups).forEach(k => {
+    const list = groups[k].sort((x, y) => x.a - y.a || x.b - y.b);
+    const role = list[0].role;
+    let prev = null, dupes = 1;
+    list.forEach((x, i) => {
+      const next = list[i + 1];
+      if (next && next.a === x.a && next.b === x.b) { dupes++; return; }
+      if (dupes > 1) {
+        warnings.push(`'${role}' ${clock_(x.a)}–${clock_(x.b)} is listed ${dupes === 2 ? 'twice' : dupes + ' times'}. Did you mean one slot with more people?`);
+        dupes = 1;
+      }
+      if (prev) {
+        if (x.a < prev.b) warnings.push(`Two '${role}' shifts overlap: ${clock_(prev.a)}–${clock_(prev.b)} and ${clock_(x.a)}–${clock_(x.b)}.`);
+        else if (x.a > prev.b) warnings.push(`There's a ${duration_(x.a - prev.b)} gap in '${role}' between ${clock_(prev.b)} and ${clock_(x.a)}.`);
+      }
+      if (!prev || x.b > prev.b) prev = x;
+    });
+  });
+  return { errors, warnings };
+}
+
+/** Minutes → "4:15" (or "4:15pm" with ampm). */
+function clock_(mins, ampm) {
+  const h24 = Math.floor(mins / 60), m = mins % 60, h = h24 % 12 || 12;
+  return `${h}:${String(m).padStart(2, '0')}${ampm ? (h24 < 12 ? 'am' : 'pm') : ''}`;
+}
+
+/** Minutes → "15 min", "1 hr", "1 hr 30 min". */
+function duration_(mins) {
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return [h ? `${h} hr` : '', m ? `${m} min` : ''].filter(String).join(' ') || '0 min';
+}
+
+/** After a coordinator moves booked slots: a "your time has changed" draft per volunteer (never sent). */
+function draftTimeChangeEmails_(ev, before) {
+  const st = settings_();
+  const now = {};
+  slots_(ev).forEach(s => { now[s.n] = s; });
+  const people = {};
+  signupsFor_(ev.id).forEach(x => {
+    if (ACTIVE.indexOf(String(x.r['Status'])) < 0 || !x.r['Email']) return;
+    const n = Number(x.r['Slot #']), was = before[n], is = now[n];
+    if (!was || !is) return;
+    if (was.start === is.start && was.end === is.end && dateKey_(was.date) === dateKey_(is.date)) return;
+    const em = String(x.r['Email']).trim().toLowerCase();
+    const p = people[em] = people[em] || { name: String(x.r['Name']), token: String(x.r['Manage token'] || ''), lines: [] };
+    const sameDay = dateKey_(was.date) === dateKey_(is.date);
+    p.lines.push(`• ${is.role}: now ${sameDay ? '' : fmtDate_(is.date, 'EEE d MMM') + ', '}${timeRange_(is)} (was ${sameDay ? '' : fmtDate_(was.date, 'EEE d MMM') + ', '}${timeRange_(was)})`);
+  });
+  let n = 0;
+  Object.keys(people).forEach(em => {
+    const p = people[em];
+    const first = p.name.trim().split(/\s+/)[0] || 'there';
+    const sender = ev.coordinator || st['Sender name'] || 'The P&C team';
+    GmailApp.createDraft(em, `Time change: ${ev.name}`,
+      `Hi ${first},\n\nA quick heads-up that the time for your spot at ${ev.name}${ev.date ? ' on ' + fmtDate_(ev.date, 'EEEE d MMMM') : ''} has changed:\n${p.lines.join('\n')}\n\n` +
+      `${manageLine_(p.token)}\n\nThanks,\n${sender}`,
+      clean_({ name: fromName_(st), replyTo: replyTo_(ev, st) }));
+    n++;
+  });
+  return n;
 }
 
 /* ============================== Pure helpers (unit-tested) ============================== */

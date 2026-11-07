@@ -10,7 +10,7 @@ A volunteer roster that runs from one Google Sheet. Event coordinators use a sim
 | **Volunteer self-service** | Confirmations and reminders include a "Cancel or check my spot" link. Cancelling reopens the spot on the form and tells the coordinator straight away. |
 | **Coordinator updates** | One short email a day, only when something has changed (new sign-ups, cancellations). If spots are still open a few days before the event, the email includes a message ready to share. |
 | **Sign-ups** | One Google Form per event, built from that event's slots. Each slot shows how many spots are left. Full slots disappear from the form, and the form closes itself when everything is full. |
-| **Templates** | Start a new event from a saved template (sausage sizzle, disco, canteen week…) or copy any past event. Slot dates move to the new date automatically. Any event can be saved as a template. |
+| **Templates** | Start a new event from a saved template (a fresh setup includes *Showcase cake stall* and *Showcase sausage sizzle*) or copy any past event. Slot dates move to the new date automatically. Any event can be saved as a template. |
 | **Quick shifts** | "Add shifts" turns a block of time into shifts, e.g. BBQ 8am–2pm in 2-hour shifts with 3 people each. |
 | **Custom questions** | Each event can ask extra questions, e.g. "Can you bring a plate? [Yes\|No]". |
 | **WWC (off)** | Volunteers don't need a Working with Children card (only paid canteen staff do, and they aren't rostered here), so no form asks for one. It can be switched on per event type if the rules ever change. |
@@ -66,6 +66,9 @@ New to this? Ask the Secretary for the illustrated setup guide (PDF, kept in the
 ## Running an event (coordinators, on their page)
 
 1. Tap **+ New event**. Enter the name, date and place, pick a template or an earlier event under *Start from*, and adjust the slots. Each slot is a job, a start and finish time, and how many people.
+   - **Running later or earlier?** Change the start of the day's *first* slot and every other slot that day moves by the same amount, keeping its length. Changing any other slot changes only that slot.
+   - **Time checks:** a slot that finishes before it starts can't be saved. Overlaps, gaps and duplicates within the same job show a warning with **Save anyway**, because they're often planned. Different jobs at the same time are never flagged.
+   - **People already booked:** if their slot moves, the page lists them before saving and can draft a "your time has changed" email to each one. Drafts go to the Secretary's Gmail Drafts; nothing is sent automatically.
 2. Tap **Publish sign-up form**, then **Copy message to share** and paste it into WhatsApp or the newsletter.
 3. Open the event any time to see who's in each slot. Use **+ Add someone**, **Remove**, **Add to slot** (for the waitlist) or **Close sign-ups**.
 4. After the event, tap **Didn't come?** for anyone who couldn't make it. Thank-you notes are prepared automatically for the Secretary to send.
@@ -80,6 +83,8 @@ New to this? Ask the Secretary for the illustrated setup guide (PDF, kept in the
    - wait, and the daily check will finish the event and draft the thank-yous the day after (adjust this under *Thank-you days after event*), or
    - use **P&C Roster › Finish event & draft thank-yous** straight away.
 6. Open **Gmail › Drafts**, read through the thank-yous and send them.
+
+**Checking times from the Sheet:** **Add shifts to an event…** and **Refresh counts, forms & stats** list any slot time problems for upcoming events, including rows typed straight into the Slots tab. They're reported, never changed automatically.
 
 ### Cancellations and the waitlist
 - Volunteers usually cancel themselves from the link in their email. The spot goes back on the form and the coordinator is told.

@@ -67,6 +67,11 @@
   @keyframes s { to { transform: rotate(360deg); } }
   #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 84px; max-width: 92%; background: var(--deep-navy); color: #fff; padding: 11px 16px; border-radius: 12px; z-index: 60; font-size: 15px; box-shadow: 0 6px 18px rgba(26,39,68,.2); }
   #toast.err { background: #fff; color: var(--coral); border: 2px solid var(--coral); }
+  #confirm { position: fixed; inset: 0; background: rgba(26,39,68,.45); z-index: 55; display: flex; align-items: flex-end; justify-content: center; }
+  #confirm .sheet { background: #fff; width: 100%; max-width: 640px; max-height: 85vh; overflow: auto; border-radius: 18px 18px 0 0; padding: 18px 16px 20px; }
+  #confirm ul { margin: 6px 0 12px; padding-left: 20px; } #confirm li { margin-bottom: 6px; }
+  .check { display: flex; gap: 8px; align-items: flex-start; font-family: 'Lato', sans-serif; font-weight: 400; margin: 6px 0 14px; color: var(--near-black); }
+  .check input { width: auto; margin-top: 4px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -77,6 +82,7 @@
 </div>
 <div id="busy" hidden><div class="spin"></div><div id="busyText">Loading…</div></div>
 <div id="toast" hidden></div>
+<div id="confirm" hidden><div class="sheet" id="confirmBody"></div></div>
 
 <script>
 const BOOT = <?!= boot ?>;
@@ -237,7 +243,8 @@ function newEvent() {
 function editEvent() {
   const e = S.ev;
   S.draft = { id: e.id, name: e.name, date: e.date, location: e.location, type: e.type, extra: e.extra, group: e.group, groupTouched: true, multiDay: e.multiDay,
-    slots: e.slots.map(s => ({ n: s.n, date: s.date, start: s.start, end: s.end, role: s.role, spots: s.spots == null ? '' : s.spots, desc: s.desc, booked: s.people.length })) };
+    slots: e.slots.map(s => ({ n: s.n, date: s.date, start: s.start, end: s.end, role: s.role, spots: s.spots == null ? '' : s.spots, desc: s.desc, booked: s.people.length })),
+    orig: Object.fromEntries(e.slots.map(s => [s.n, { start: s.start, end: s.end, date: s.date }])) };
   renderEditor();
 }
 function totalSpots() { return S.draft.slots.reduce((a, s) => a + (Number(s.spots) || 0), 0); }
@@ -251,7 +258,7 @@ function renderEditor() {
     <div class="slotedit">
       <label style="margin-top:2px">Job</label><input data-i="${i}" data-f="role" value="${esc(s.role)}" placeholder="e.g. BBQ, Door, Canteen">
       <div class="grid">
-        <div><label>Start</label><input type="time" data-i="${i}" data-f="start" value="${esc(s.start)}"></div>
+        <div><label>Start</label><input type="time" data-i="${i}" data-f="start" data-prev="${esc(s.start)}" value="${esc(s.start)}"></div>
         <div><label>Finish</label><input type="time" data-i="${i}" data-f="end" value="${esc(s.end)}"></div>
         <div><label>People</label><input type="number" min="1" inputmode="numeric" data-i="${i}" data-f="spots" value="${esc(s.spots)}"></div>
       </div>
@@ -307,6 +314,12 @@ function renderEditor() {
     S.draft.slots[Number(el.dataset.i)][el.dataset.f] = el.value;
     if (el.dataset.f === 'spots' && !S.draft.groupTouched && $('f_group')) { S.draft.group = totalSpots() >= 30; $('f_group').checked = S.draft.group; }
   }));
+  // Moving the day's first slot moves the whole day with it (on change, not on every keystroke).
+  document.querySelectorAll('[data-f="start"]').forEach(el => el.addEventListener('change', () => {
+    const old = el.dataset.prev;
+    el.dataset.prev = el.value;
+    shiftDay(Number(el.dataset.i), old, el.value);
+  }));
   ['name', 'date', 'location', 'type', 'extra'].forEach(f => { const el = $('f_' + f); if (el) el.addEventListener('input', () => { S.draft[f] = el.value; }); });
 }
 function readBasics() { ['name', 'date', 'location', 'type', 'extra'].forEach(f => { const el = $('f_' + f); if (el) S.draft[f] = el.value; }); }
@@ -340,20 +353,117 @@ async function pickSource(v) {
   renderEditor();
   toast(`${r.slots.length} slots copied${booked ? ' (replacing what was there)' : ''} – change anything you like.`);
 }
-async function save() {
+/* ---------- slot times ---------- */
+function toMin(t) { if (!t) return null; const [h, m] = String(t).split(':').map(Number); return isNaN(h) ? null : h * 60 + (m || 0); }
+function toHHMM(x) { return String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); }
+function clock(x, ampm) { const h24 = Math.floor(x / 60), h = h24 % 12 || 12; return `${h}:${String(x % 60).padStart(2, '0')}${ampm ? (h24 < 12 ? 'am' : 'pm') : ''}`; }
+function duration(x) { const h = Math.floor(x / 60), m = x % 60; return [h ? `${h} hr` : '', m ? `${m} min` : ''].filter(Boolean).join(' ') || '0 min'; }
+function dayOf(s) { return S.draft.multiDay ? s.date : S.draft.date; }
+
+/** If slot i was the earliest on its day, move every other slot that day by the same amount. */
+function shiftDay(i, oldVal, newVal) {
+  const d = S.draft, me = d.slots[i];
+  const a = toMin(oldVal), b = toMin(newVal);
+  if (a == null || b == null || a === b) return;
+  const day = dayOf(me);
+  const sameDay = d.slots.map((x, j) => ({ x, j })).filter(o => dayOf(o.x) === day && toMin(o.j === i ? oldVal : o.x.start) != null);
+  const earliest = Math.min(...sameDay.map(o => toMin(o.j === i ? oldVal : o.x.start)));
+  if (a !== earliest) return; // any other slot: only that slot changes
+  const delta = b - a;
+  const others = sameDay.filter(o => o.j !== i);
+  if (!others.length) { if (me.end) me.end = toHHMM(Math.min(Math.max(toMin(me.end) + delta, 0), 1439)); renderEditor(); return; }
+  const moving = others.map(o => o.x).concat(me.end ? [{ role: me.role, start: newVal, end: me.end, self: true }] : []);
+  for (const x of moving) {
+    const s2 = x.self ? b : toMin(x.start) + delta, e2 = toMin(x.end) == null ? null : toMin(x.end) + delta;
+    if (s2 < 0 || (e2 != null && (e2 < 0 || e2 > 1439))) {
+      me.start = oldVal;
+      renderEditor();
+      toast(`Can't move the day that far: "${x.role || 'a slot'}" would ${delta > 0 ? 'finish after midnight' : 'start before midnight'}.`, true);
+      return;
+    }
+  }
+  if (me.end) me.end = toHHMM(toMin(me.end) + delta);
+  others.forEach(o => { o.x.start = toHHMM(toMin(o.x.start) + delta); if (o.x.end) o.x.end = toHHMM(toMin(o.x.end) + delta); });
+  renderEditor();
+  toast(`${others.length} other slot${others.length === 1 ? '' : 's'} moved ${duration(Math.abs(delta))} ${delta > 0 ? 'later' : 'earlier'}.`);
+}
+
+/** Same rules as slotIssues_ in Code.gs: one hard stop, everything else a warning. */
+function slotIssues(slots) {
+  const errors = [], warnings = [], groups = {};
+  slots.forEach(s => {
+    const role = String(s.role || '').trim();
+    const a = toMin(s.start), b = toMin(s.end);
+    if (!role || a == null || b == null) return;
+    if (b <= a) { errors.push(`"${role}" finishes before it starts (${clock(a, true)}–${clock(b, true)}).`); return; }
+    const k = role.toLowerCase() + '|' + (s.date || '');
+    (groups[k] = groups[k] || []).push({ role, a, b });
+  });
+  Object.keys(groups).forEach(k => {
+    const list = groups[k].sort((x, y) => x.a - y.a || x.b - y.b);
+    const role = list[0].role;
+    let prev = null, dupes = 1;
+    list.forEach((x, i) => {
+      const next = list[i + 1];
+      if (next && next.a === x.a && next.b === x.b) { dupes++; return; }
+      if (dupes > 1) { warnings.push(`'${role}' ${clock(x.a)}–${clock(x.b)} is listed ${dupes === 2 ? 'twice' : dupes + ' times'}. Did you mean one slot with more people?`); dupes = 1; }
+      if (prev) {
+        if (x.a < prev.b) warnings.push(`Two '${role}' shifts overlap: ${clock(prev.a)}–${clock(prev.b)} and ${clock(x.a)}–${clock(x.b)}.`);
+        else if (x.a > prev.b) warnings.push(`There's a ${duration(x.a - prev.b)} gap in '${role}' between ${clock(prev.b)} and ${clock(x.a)}.`);
+      }
+      if (!prev || x.b > prev.b) prev = x;
+    });
+  });
+  return { errors, warnings };
+}
+
+/** Booked slots whose day or times differ from when the editor opened. */
+function movedBooked() {
+  const d = S.draft;
+  if (!d.orig) return [];
+  return d.slots.filter(s => s.n && s.booked && d.orig[s.n]).filter(s => {
+    const o = d.orig[s.n];
+    return o.start !== s.start || o.end !== s.end || o.date !== s.date;
+  }).map(s => {
+    const o = d.orig[s.n];
+    return `${s.role} ${clock(toMin(o.start))}–${clock(toMin(o.end))} (${s.booked} ${s.booked === 1 ? 'person' : 'people'}) will move to ${o.date !== s.date ? s.date + ' ' : ''}${clock(toMin(s.start))}–${clock(toMin(s.end))}`;
+  });
+}
+
+function closeConfirm() { $('confirm').hidden = true; }
+
+function save() {
   readBasics();
   const d = S.draft;
   if (!d.name.trim()) { toast('Give the event a name.', true); return; }
   if (!d.date) { toast('Choose the date.', true); return; }
   if (!d.multiDay) d.slots.forEach(s => { s.date = d.date; });
+  const issues = slotIssues(d.slots);
+  if (issues.errors.length) { toast(issues.errors[0], true); return; }
+  const moved = movedBooked();
+  if (!issues.warnings.length && !moved.length) return doSave(false);
+  $('confirmBody').innerHTML = `
+    ${issues.warnings.length ? `<h3>Check these times</h3><ul>${issues.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+      <p class="small muted">These are only warnings. Overlaps and breaks are fine if you planned them.</p>` : ''}
+    ${moved.length ? `<h3>People already booked will move</h3><ul>${moved.map(m => `<li>${esc(m)}</li>`).join('')}</ul>
+      <label class="check"><input type="checkbox" id="notifyMoved" checked> Draft a "your time has changed" email to them (saved in the Secretary's Gmail Drafts, not sent)</label>` : ''}
+    <div class="row"><button onclick="doSave(!!($('notifyMoved') && $('notifyMoved').checked))">${issues.warnings.length ? 'Save anyway' : 'Save'}</button><button class="ghost" onclick="closeConfirm()">Go back</button></div>`;
+  $('toast').hidden = true;
+  $('confirm').hidden = false;
+}
+
+async function doSave(notifyMoved) {
+  closeConfirm();
+  const d = S.draft;
   const isNew = !d.id;
   S.ev = await run(isNew ? 'Publishing your sign-up form…' : 'Saving…', 'cpSaveEvent', {
-    id: d.id, name: d.name, date: d.date, location: d.location, type: d.type, extra: d.extra, group: d.group,
+    id: d.id, name: d.name, date: d.date, location: d.location, type: d.type, extra: d.extra, group: d.group, notifyMoved,
     slots: d.slots.map(s => ({ n: s.n, date: s.date, start: s.start, end: s.end, role: s.role, spots: s.spots, desc: s.desc })),
   });
   S.draft = null; S.runOpen = false;
   renderEvent(); window.scrollTo(0, 0);
-  toast(isNew ? 'Your sign-up form is live. Copy the link or the message to share it.' : 'Saved – the sign-up form is updated too.');
+  const notes = S.ev.notices ? ` ${S.ev.notices} "time has changed" email${S.ev.notices === 1 ? ' is' : 's are'} in the Secretary's Gmail Drafts.` : '';
+  toast((isNew ? 'Your sign-up form is live. Copy the link or the message to share it.' : 'Saved. The sign-up form is updated too.') + notes);
 }
 
 loadHome();
