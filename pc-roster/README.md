@@ -171,6 +171,27 @@ Forms created before you set the template keep Google's default look. To update 
 
 **Not covered yet.** The Hungry Lion canteen has its own orange-and-cream sub-brand. Canteen emails and forms currently use the main P&C look.
 
+## Security and privacy
+
+Who can see volunteers' contact details:
+
+| Who | Sees |
+|---|---|
+| The Secretary and anyone the Sheet is shared with | Everything, in the Sheet. Keep it shared with no one, or only the executive. |
+| A coordinator, with their own link | Names, emails and phone numbers for **their own events only**, and for no longer than *Hide contact details after (days)* (default 30) after each event. |
+| A volunteer, with the link in their email | Their own name and spots. Never anyone else's. |
+| Anyone with a sign-up form link | The slots and how many spots are left. Never anyone's answers. |
+
+How that's enforced:
+- **Every coordinator call checks the key**, and only for that coordinator's events. Volunteer calls check their own token. Keys and tokens are long random codes, and setting *Active = No* switches a coordinator's link off at once.
+- **Spreadsheet-only functions refuse to run from a web page.** The daily job only runs once a day unless you start it from the menu, so it can't be used to send repeated emails.
+- **Forms** never show other people's answers. Only the owner can edit them, and only the published responder permission is left open.
+- **Anything typed in** is shortened to a sensible length, and text starting with `= + - @` is stored as plain text, not a formula. Names and other text are always shown as plain text on the pages.
+- **Group emails** use BCC. Every form shows the *Privacy note* from Settings.
+- **The code holds no passwords, keys or volunteer data**, so it's fine for it to sit in a public GitHub repository. Keys live only in the Sheet.
+
+Worth doing yourself: keep **2-step verification** on secretary@ (the roster runs as that account), and review the Coordinators tab each year.
+
 ## Good to know
 
 - **Sign-up forms are open to anyone with the link. No Google account needed.** Whenever a form is created or updated, and on every Setup / repair and Refresh, the roster publishes the form and sets its responders to *Anyone with the link* (a Drive permission: anyone · reader · published). It also switches off the older sign-in setting, Google's own email collection and the one-response limit. This needs the **Drive API** service, which `appsscript.json` switches on. Paste in the latest copy of that file when you update.

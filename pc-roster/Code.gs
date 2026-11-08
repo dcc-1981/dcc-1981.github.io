@@ -104,6 +104,8 @@ const DEFAULT_SETTINGS = [
   ['Send time-change emails', 'Yes', 'Yes = when a coordinator moves a slot people are booked on, those volunteers are emailed their new time straight away (the coordinator can untick it for one save). No = never, and the option is hidden on the coordinator page.'],
   ['Notify coordinator of each sign-up', 'No', 'Yes = the event coordinator gets an email for every sign-up. (They get a daily update anyway – see Coordinator updates.)'],
   ['Coordinator page address', '', 'The Web app URL from Apps Script › Deploy (ends in /exec). Needed for coordinator links and volunteers\' cancel links. See README.'],
+  ['Privacy note', 'We ask for your name, email and mobile so the event coordinator can organise the roster and contact you about it. Only P&C coordinators and the P&C executive can see them, and other volunteers never do.', 'Shown on every sign-up form. Blank = left out.'],
+  ['Hide contact details after (days)', '30', 'Coordinators stop seeing volunteers\' emails and phone numbers this many days after an event. The Secretary still has them in the Sheet.'],
   ['Coordinator updates', 'Yes', 'Yes = each coordinator gets one short email a day, only when something changed (new sign-ups, cancellations) or spots are still open close to the day.'],
   ['Nudge days before', '5', 'If spots are still open this many days before an event, the coordinator\'s update includes a ready-to-share message.'],
   ['Share message', 'Can you help at {EventName}? We\'re looking for volunteers on {EventDate} at {Location}. Choose a time that suits you here: {FormLink}\n\nEven one shift makes a real difference – thank you.', 'The message coordinators copy into WhatsApp or the newsletter. Placeholders: {EventName} {EventDate} {Location} {FormLink} {PCName}'],
@@ -177,6 +179,7 @@ function menuFilterEvent() {
 }
 
 function menuClearFilters() {
+  requireUi_();
   [SH.SLOTS, SH.SIGNUPS].forEach(name => {
     const f = sheet_(name).getFilter();
     if (f) f.remove();
@@ -215,6 +218,7 @@ function menuSaveTemplate() {
 }
 
 function menuRefreshAll() {
+  requireUi_();
   const issues = refreshAll_();
   const formProblem = issues[0] === FORM_ACCESS_PROBLEM || issues[0] === DRIVE_SERVICE_MISSING ? issues.shift() : '';
   if (formProblem || issues.length) {
@@ -677,6 +681,8 @@ function buildForm_(eventId) {
       : 'Thank you! The coordinator will be in touch.')
     .setShowLinkToRespondAgain(false)
     .setAllowResponseEdits(false);
+  // Respondents must never see other people's answers (names, emails, phones).
+  try { form.setPublishingSummary(false); } catch (e) { Logger.log('setPublishingSummary(false) failed: ' + (e && e.message)); }
   openFormToEveryone_(form, true);
 
   const needsWwc = wwcRequired_(ev, st);
@@ -820,7 +826,10 @@ function lockFormEditing_(formId) {
     if (typeof Drive !== 'undefined' && Drive.Permissions) {
       const res = Drive.Permissions.list(formId, { supportsAllDrives: true, includePermissionsForView: 'published', fields: 'permissions(id,type,role,view)' });
       ((res && res.permissions) || []).forEach(p => {
-        if ((p.type === 'domain' || p.type === 'anyone') && EDIT_ROLES.indexOf(p.role) >= 0) {
+        // Editors could read every response; a non-published viewer could see the form's editor view.
+        // Only the published responder permission (reader + view "published") may stay.
+        const responder = p.role === 'reader' && p.view === 'published';
+        if ((p.type === 'domain' || p.type === 'anyone') && !responder) {
           Drive.Permissions.remove(formId, p.id, { supportsAllDrives: true });
           Logger.log(`Removed ${p.type} ${p.role} permission from form ${formId}`);
           changed++;
@@ -899,6 +908,7 @@ function formDescription_(ev, slots, st) {
   const uniq = descs.filter((d, i) => descs.indexOf(d) === i);
   if (uniq.length) lines.push('', 'About the roles:', ...uniq);
   if (ev.coordinator || ev.coordinatorEmail) lines.push('', `Questions? ${[ev.coordinator, ev.coordinatorEmail].filter(String).join(' – ')}`);
+  if (st['Privacy note']) lines.push('', st['Privacy note']);
   lines.push('', '———', footerLine_(st));
   return lines.join('\n').trim();
 }
@@ -988,10 +998,10 @@ function onRosterFormSubmit(e) {
 
 function processSignup_(ev, ans, timestamp) {
   const st = settings_();
-  const email = String(ans[Q.EMAIL] || '').trim().toLowerCase();
-  const name = String(ans[Q.NAME] || '').trim();
-  const phone = String(ans[Q.PHONE] || '').trim();
-  const child = String(ans[Q.CHILD] || '').trim();
+  const email = clip_(ans[Q.EMAIL], 254).toLowerCase();
+  const name = clip_(ans[Q.NAME], 100);
+  const phone = clip_(ans[Q.PHONE], 40);
+  const child = clip_(ans[Q.CHILD], 100);
   const nums = slotNumbersFromAnswer_(ans[Q.SLOTS]);
 
   const slots = slots_(ev);
@@ -1015,8 +1025,8 @@ function processSignup_(ev, ans, timestamp) {
   const wwcExp = toDate_(ans[Q.WWC_EXP]) || (vol ? vol.wwcExp : null);
 
   const notes = [];
-  parseExtraQuestions_(ev.extra).forEach(x => { if (ans[x.title]) notes.push(`${x.title} ${ans[x.title]}`); });
-  if (ans[Q.NOTES]) notes.push(`Note: ${ans[Q.NOTES]}`);
+  parseExtraQuestions_(ev.extra).forEach(x => { if (ans[x.title]) notes.push(`${x.title} ${clip_(ans[x.title], 300)}`); });
+  if (ans[Q.NOTES]) notes.push(`Note: ${clip_(ans[Q.NOTES], 1000)}`);
 
   const rows = [];
   const results = [];
@@ -1177,6 +1187,14 @@ function closeEvent_(eventId) {
 
 /** Time-driven trigger (daily ~7am). Also available from the menu. */
 function dailyRosterJob() {
+  // Runs from the daily trigger or the menu. Anything else (e.g. a call from a web page) may only
+  // run it once a day, so it can't be used to send repeated emails.
+  const props = PropertiesService.getDocumentProperties();
+  const lastRun = Number(props.getProperty('dailyJobLastRun') || 0);
+  if (!ui_()) {
+    if (Date.now() - lastRun < 20 * 3600 * 1000) { Logger.log('dailyRosterJob skipped: already ran in the last 20 hours'); return; }
+    props.setProperty('dailyJobLastRun', String(Date.now())); // menu runs don't count, so they never delay the 7am run
+  }
   const st = settings_();
   const today = todayKey_();
   const digest = [];
@@ -1788,9 +1806,13 @@ function eventDetail_(ev) {
   const st = settings_();
   const today = todayKey_();
   const people = signupsFor_(ev.id);
+  const lastDay = slots_(ev).reduce((m, s) => (dateKey_(s.date) > m ? dateKey_(s.date) : m), dateKey_(ev.date));
+  const hideAfter = Number(st['Hide contact details after (days)']);
+  const hideContacts = !!lastDay && !isNaN(hideAfter) && String(st['Hide contact details after (days)']).trim() !== '' && daysBetween_(lastDay, today) > hideAfter;
   const slots = slots_(ev).map(s => {
     const here = people.filter(x => Number(x.r['Slot #']) === s.n && String(x.r['Status']) !== 'Cancelled').map(x => ({
-      ref: String(x.r['Ref']), name: String(x.r['Name']), email: String(x.r['Email']), phone: String(x.r['Phone']),
+      ref: String(x.r['Ref']), name: String(x.r['Name']),
+      email: hideContacts ? '' : String(x.r['Email']), phone: hideContacts ? '' : String(x.r['Phone']),
       status: String(x.r['Status']), attended: String(x.r['Attended'] || ''),
     }));
     const active = here.filter(p => ACTIVE.indexOf(p.status) >= 0);
@@ -1805,7 +1827,7 @@ function eventDetail_(ev) {
   return {
     id: ev.id, name: ev.name, type: ev.type, date: dateKey_(ev.date), dateText: card.dateText, location: ev.location,
     status: ev.status, formUrl: ev.formUrl, share: shareText_(ev, st), extra: ev.extra,
-    group: groupEmails_(ev, st), past: card.past, filled: card.filled, spots: card.spots,
+    group: groupEmails_(ev, st), past: card.past, filled: card.filled, spots: card.spots, contactsHidden: hideContacts,
     multiDay: slots.some(s => s.date !== dateKey_(ev.date)), slots,
   };
 }
@@ -1840,8 +1862,10 @@ function cpSaveEvent(key, d) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
-    const name = String(d.name || '').trim();
+    const name = clip_(d.name, 120);
     if (!name) throw new Error('Give the event a name.');
+    d.location = clip_(d.location, 120); d.extra = clip_(d.extra, 1500);
+    (d.slots || []).forEach(s => { s.role = clip_(s.role, 80); s.desc = clip_(s.desc, 200); });
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.date || ''))) throw new Error('Choose the event date.');
     const slots = (d.slots || []).filter(s => String(s.role || '').trim());
     if (!slots.length) throw new Error('Add at least one slot (a job and a time).');
@@ -2333,6 +2357,19 @@ function slotNumbersFromAnswer_(answer) {
   return out;
 }
 
+/**
+ * Text that starts with = + - or @ would be read by Sheets as a formula, so it's stored as plain
+ * text instead (a leading apostrophe, which Sheets hides). Numbers and dates are untouched.
+ */
+function cellSafe_(v) {
+  return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v;
+}
+
+/** Trimmed text, cut to a sensible length. */
+function clip_(v, max) {
+  return String(v == null ? '' : v).trim().slice(0, max);
+}
+
 function splitList_(s) {
   return String(s || '').split(',').map(x => x.trim()).filter(Boolean);
 }
@@ -2426,6 +2463,7 @@ function getTable_(name) {
     set(i, h, v) {
       const c = headers.indexOf(h);
       if (c < 0) return;
+      v = cellSafe_(v);
       sh.getRange(i + 2, c + 1).setValue(v);
       rows[i][h] = v;
     },
@@ -2436,7 +2474,7 @@ function appendObjects_(name, objs) {
   if (!objs.length) return;
   const sh = sheet_(name);
   const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
-  const data = objs.map(o => headers.map(h => (h in o && o[h] != null ? o[h] : '')));
+  const data = objs.map(o => headers.map(h => cellSafe_(h in o && o[h] != null ? o[h] : '')));
   sh.getRange(sh.getLastRow() + 1, 1, data.length, headers.length).setValues(data);
 }
 

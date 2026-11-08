@@ -187,6 +187,7 @@ function renderEvent() {
     ${progress(e)}
     <div style="height:14px"></div>
     ${sharing}
+    ${e.contactsHidden ? '<div class="callout">Contact details are no longer shown for this event. The Secretary can help if you need to reach someone.</div>' : ''}
     ${e.past ? '<div class="callout">This event has finished. Thank-you notes are prepared for you – just tap <b>Didn\'t come</b> for anyone who couldn\'t make it.</div>' : ''}
     ${slotsHtml}
     ${e.past ? '' : '<button class="ghost big" style="margin-top:12px" onclick="editEvent()">Edit event &amp; slots</button>'}`;
