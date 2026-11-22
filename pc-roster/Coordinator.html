@@ -72,6 +72,28 @@
   #confirm ul { margin: 6px 0 12px; padding-left: 20px; } #confirm li { margin-bottom: 6px; }
   .check { display: flex; gap: 8px; align-items: flex-start; font-family: 'Lato', sans-serif; font-weight: 400; margin: 6px 0 14px; color: var(--near-black); }
   .check input { width: auto; margin-top: 4px; }
+  .choose { display: grid; gap: 10px; margin-top: 10px; }
+  .choose button { text-align: left; display: block; background: #fff; color: var(--near-black); border: 2px solid var(--pale-blue); border-radius: 16px; padding: 14px 16px; font-family: 'Lato', sans-serif; font-weight: 400; }
+  .choose button:hover { border-color: var(--cyan); background: #fff; }
+  .choose b { display: block; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 18px; color: var(--deep-navy); margin-bottom: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+  .chip { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 14px; border-radius: 999px; padding: 5px 12px; background: var(--cyan-tint); color: var(--deep-navy); }
+  .chip.zero { background: #FBE9E6; color: var(--coral); }
+  .tag { display: inline-block; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 11px; border-radius: 999px; padding: 1px 7px; margin-left: 4px; background: #E7F1EB; color: var(--sage); vertical-align: 1px; }
+  .ticks { display: flex; gap: 18px; margin-top: 10px; }
+  .ticks label { display: flex; align-items: center; gap: 8px; font-family: 'Lato', sans-serif; font-weight: 400; color: var(--near-black); margin: 0; }
+  .ticks input { width: auto; }
+  #print { display: none; }
+  @media print {
+    body { background: #fff; }
+    .wrap, #busy, #toast, #confirm { display: none !important; }
+    #print { display: block; font-family: 'Lato', sans-serif; color: #000; padding: 0 8mm; }
+    #print h1 { font-family: 'Nunito', sans-serif; font-size: 22px; color: #1E3D7A; margin: 0 0 2px; }
+    #print h2 { font-family: 'Nunito', sans-serif; font-size: 16px; color: #1E3D7A; margin: 14px 0 4px; }
+    #print table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    #print th, #print td { border-bottom: 1px solid #ccc; padding: 4px 6px; text-align: left; vertical-align: top; }
+    #print td.tick { width: 24px; } #print td.tick span { display: inline-block; width: 14px; height: 14px; border: 1.5px solid #555; border-radius: 3px; }
+  }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -83,6 +105,7 @@
 <div id="busy" hidden><div class="spin"></div><div id="busyText">Loading…</div></div>
 <div id="toast" hidden></div>
 <div id="confirm" hidden><div class="sheet" id="confirmBody"></div></div>
+<div id="print"></div>
 
 <script>
 const BOOT = <?!= boot ?>;
@@ -144,8 +167,8 @@ function renderHome() {
   const h = S.home;
   const upcoming = h.events.filter(e => !e.past), past = h.events.filter(e => e.past).reverse();
   const card = e => `<div class="card click" onclick="openEvent('${esc(e.id)}')">
-      <div class="spread"><div><h3>${esc(e.name)}</h3><div class="small muted">${esc(e.dateText)}</div></div>${statusPill(e)}</div>
-      ${progress(e)}</div>`;
+      <div class="spread"><div><h3>${esc(e.name)}</h3><div class="small muted">${esc(e.dateText)}${e.plate ? ' · Bring a plate' : ''}</div></div>${statusPill(e)}</div>
+      ${e.plate ? plateSummary(e) : progress(e)}</div>`;
   $('app').innerHTML = `
     <h1>Hi ${esc(h.name.split(' ')[0])}</h1>
     <p class="muted">Set up an event, share the link, and see who's coming. Confirmations, reminders and thank-yous are handled for you.</p>
@@ -156,6 +179,13 @@ function renderHome() {
   window.scrollTo(0, 0);
 }
 
+function plateChips(counts) {
+  return '<div class="chips">' + Object.keys(counts).map(k => `<span class="chip ${counts[k] ? '' : 'zero'}">${esc(k)}: ${counts[k]}</span>`).join('') + '</div>';
+}
+function plateSummary(e) {
+  return `<div class="small muted" style="margin-top:6px">${e.plates} plate${e.plates === 1 ? '' : 's'} so far</div>${plateChips(e.counts)}`;
+}
+
 /* ---------- one event ---------- */
 async function openEvent(id) {
   S.ev = await run('Loading…', 'cpEvent', id);
@@ -164,6 +194,7 @@ async function openEvent(id) {
   window.scrollTo(0, 0);
 }
 function renderEvent() {
+  if (S.ev.plate) return renderPlateEvent();
   const e = S.ev;
   const byDate = {};
   e.slots.forEach(s => { (byDate[s.date] = byDate[s.date] || []).push(s); });
@@ -238,11 +269,27 @@ async function backHome() { await loadHome(); }
 /* ---------- new / edit ---------- */
 function blankSlot(date) { return { n: '', date: date || (S.draft && S.draft.date) || '', start: '', end: '', role: '', spots: 2, desc: '' }; }
 function newEvent() {
+  $('app').innerHTML = `
+    <button class="link" onclick="renderHome()">← Your events</button>
+    <div class="kicker" style="margin-top:8px">New event</div>
+    <h1>What kind of sign-up?</h1>
+    <div class="choose">
+      <button onclick="newSlotsEvent()"><b>Timeslots</b>People sign up for jobs at set times, like the BBQ or the door.</button>
+      <button onclick="newPlateEvent()"><b>Bring a plate</b>Families say what food or drink they'll bring. No times or shifts.</button>
+    </div>`;
+  window.scrollTo(0, 0);
+}
+function newSlotsEvent() {
   S.draft = { id: '', name: '', date: '', location: '', type: S.home.types[0] || 'Event', extra: '', group: false, groupTouched: false, multiDay: false, source: '', slots: [] };
   renderEditor();
 }
+function newPlateEvent() {
+  S.draft = { plate: true, id: '', name: '', date: '', startTime: '', location: '', type: S.home.types[0] || 'Event' };
+  renderPlateEditor();
+}
 function editEvent() {
   const e = S.ev;
+  if (e.plate) { S.draft = { plate: true, id: e.id, name: e.name, date: e.date, startTime: e.startTime, location: e.location, type: e.type }; return renderPlateEditor(); }
   S.draft = { id: e.id, name: e.name, date: e.date, location: e.location, type: e.type, extra: e.extra, group: e.group, groupTouched: true, multiDay: e.multiDay,
     slots: e.slots.map(s => ({ n: s.n, date: s.date, start: s.start, end: s.end, role: s.role, spots: s.spots == null ? '' : s.spots, desc: s.desc, booked: s.people.length })),
     orig: Object.fromEntries(e.slots.map(s => [s.n, { start: s.start, end: s.end, date: s.date }])) };
@@ -468,6 +515,148 @@ async function doSave(notifyMoved) {
   if (sent) msg += ` ${sent} volunteer${sent === 1 ? '' : 's'} emailed about their new time.`;
   if (failed) msg += ` ${failed} email${failed === 1 ? '' : 's'} couldn't be sent, so please let them know.`;
   toast(msg, failed > 0);
+}
+
+/* ---------- bring a plate ---------- */
+function renderPlateEditor() {
+  const d = S.draft, h = S.home, isNew = !d.id;
+  $('app').innerHTML = `
+    <button class="link" onclick="${isNew ? 'newEvent()' : 'renderEvent()'}">← Back</button>
+    <div class="kicker" style="margin-top:8px">${isNew ? 'New event · Bring a plate' : 'Edit event'}</div>
+    <h1>${isNew ? 'Set up your event' : esc(d.name)}</h1>
+    <label>Event name</label><input id="p_name" value="${esc(d.name)}" placeholder="e.g. End of year picnic">
+    <div class="row">
+      <div><label>Date</label><input type="date" id="p_date" value="${esc(d.date)}"></div>
+      <div><label>Start time</label><input type="time" id="p_start" value="${esc(d.startTime)}"></div>
+    </div>
+    <label>Where</label><input id="p_location" value="${esc(d.location)}" placeholder="e.g. School oval">
+    <details ${d.type !== (h.types[0] || 'Event') ? 'open' : ''} style="margin-top:18px">
+      <summary>More options</summary>
+      <label>Type of event</label><select id="p_type">${h.types.map(t => `<option ${t === d.type ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
+    </details>
+    <p class="small muted" style="margin-top:14px">Families get a Google Form. It shows your name and email so they can ask questions, and a list of what's covered so far. It never shows anyone's name or email.</p>
+    <div class="sticky"><div class="inner"><button class="big" onclick="savePlate()">${isNew ? 'Publish sign-up form' : 'Save changes'}</button></div></div>`;
+  window.scrollTo(0, 0);
+}
+async function savePlate() {
+  const d = S.draft, isNew = !d.id;
+  ['name', 'date', 'location', 'type'].forEach(f => { d[f] = $('p_' + f).value; });
+  d.startTime = $('p_start').value;
+  if (!d.name.trim()) { toast('Give the event a name.', true); return; }
+  if (!d.date) { toast('Choose the date.', true); return; }
+  if (!d.startTime) { toast('Add the start time.', true); return; }
+  S.ev = await run(isNew ? 'Publishing your sign-up form…' : 'Saving…', 'cpSaveEvent', { id: d.id, format: 'plate', name: d.name, date: d.date, startTime: d.startTime, location: d.location, type: d.type });
+  S.draft = null; S.plateSort = 'category';
+  renderEvent(); window.scrollTo(0, 0);
+  toast(isNew ? 'Your sign-up form is live. Copy the link or the message to share it.' : 'Saved. The form is updated too.');
+}
+
+function sortedEntries() {
+  const e = S.ev, by = S.plateSort || 'category';
+  const list = e.entries.slice();
+  const cat = x => e.categories.indexOf(x.category);
+  if (by === 'category') list.sort((a, b) => cat(a) - cat(b) || a.addedAt - b.addedAt);
+  else if (by === 'name') list.sort((a, b) => (a.last + ' ' + a.first).toLowerCase().localeCompare((b.last + ' ' + b.first).toLowerCase()));
+  else list.sort((a, b) => b.addedAt - a.addedAt);
+  return list;
+}
+function tagHtml(x) { return (x.gf ? '<span class="tag">GF</span>' : '') + (x.nf ? '<span class="tag">NF</span>' : ''); }
+function plateEntry(x) {
+  const e = S.ev;
+  if (S.editingPlate === x.ref) {
+    return `<div class="card">
+      <div class="row"><div><label>First name</label><input id="ed_first" value="${esc(x.first)}"></div><div><label>Last name</label><input id="ed_last" value="${esc(x.last)}"></div></div>
+      <label>Category</label><select id="ed_category">${e.categories.map(c => `<option ${c === x.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+      <label>What they're bringing</label><input id="ed_item" value="${esc(x.item)}">
+      <div class="ticks"><label><input type="checkbox" id="ed_gf" ${x.gf ? 'checked' : ''}> Gluten free</label><label><input type="checkbox" id="ed_nf" ${x.nf ? 'checked' : ''}> Nut free</label></div>
+      ${e.contactsHidden ? '' : `<label>Email <span class="muted small">(optional)</span></label><input id="ed_email" inputmode="email" value="${esc(x.email)}">`}
+      <div class="row" style="margin-top:12px"><button onclick="savePlateEntry('${esc(x.ref)}')">Save</button><button class="ghost" onclick="S.editingPlate=null;renderEvent()">Cancel</button></div>
+    </div>`;
+  }
+  const action = S.removingPlate === x.ref
+    ? `<span class="row" style="flex:0 0 auto"><button class="link danger" onclick="removePlate('${esc(x.ref)}')">Yes, remove</button><button class="link" onclick="S.removingPlate=null;renderEvent()">Keep</button></span>`
+    : `<span class="row" style="flex:0 0 auto;gap:14px"><button class="link" onclick="S.editingPlate='${esc(x.ref)}';S.removingPlate=null;renderEvent()">Edit</button><button class="link" onclick="S.removingPlate='${esc(x.ref)}';S.editingPlate=null;renderEvent()">Remove</button></span>`;
+  return `<div class="person"><div class="who"><b>${esc(x.item)}</b>${tagHtml(x)}${x.similarTo ? ` <span class="pill warn" title="Looks like an earlier entry">Similar to ${esc(x.similarTo)}</span>` : ''}${S.plateSort === 'category' ? '' : ` <span class="small muted">· ${esc(x.category)}</span>`}
+      <div class="small">${esc(x.first)} ${esc(x.last)}${x.email ? ` · <span class="muted">${esc(x.email)}</span>` : ''}${x.added ? ` · <span class="muted">${esc(x.added)}</span>` : ''}</div></div>${action}</div>`;
+}
+function renderPlateEvent() {
+  const e = S.ev, by = S.plateSort || 'category';
+  const list = sortedEntries();
+  let body;
+  if (!list.length) body = '<div class="panel">Nothing yet. Share the form link and entries will appear here.</div>';
+  else if (by === 'category') {
+    body = e.categories.map(c => {
+      const here = list.filter(x => x.category === c);
+      return `<div class="card"><div class="spread"><h3>${esc(c)}</h3><span class="pill ${here.length ? 'open' : 'warn'}">${here.length}</span></div>
+        <div style="margin-top:4px">${here.length ? here.map(plateEntry).join('') : '<div class="small muted">Nothing yet</div>'}</div></div>`;
+    }).join('');
+  } else body = `<div class="card">${list.map(plateEntry).join('')}</div>`;
+  const sharing = e.past || e.status === 'Done' ? '' : `
+    <div class="panel">
+      <div class="row">
+        <button onclick="copy(S.ev.formUrl, 'Sign-up link')">Copy sign-up link</button>
+        <button class="ghost" onclick="copy(S.ev.share, 'Message')">Copy message to share</button>
+      </div>
+      <div class="spread small" style="margin-top:10px;align-items:center">
+        <span>${e.status === 'Closed' ? 'Sign-ups are <b>closed</b>.' : 'Sign-ups are <b>open</b>.'} <a href="${esc(e.formUrl)}" target="_blank">See the form</a></span>
+        <button class="link" onclick="setOpen(${e.status === 'Closed'})">${e.status === 'Closed' ? 'Reopen sign-ups' : 'Close sign-ups'}</button>
+      </div>
+    </div>`;
+  $('app').innerHTML = `
+    <button class="link" onclick="backHome()">← Your events</button>
+    <div class="kicker" style="margin-top:8px">${esc(e.dateText)} · Bring a plate</div>
+    <h1>${esc(e.name)}</h1>
+    <div class="muted">${[e.startText ? 'Starts ' + e.startText : '', e.location].filter(Boolean).map(esc).join(' · ')}</div>
+    <div class="small muted" style="margin-top:6px">${e.plates} plate${e.plates === 1 ? '' : 's'} so far</div>
+    ${plateChips(e.counts)}
+    <div style="height:10px"></div>
+    ${sharing}
+    ${e.contactsHidden ? '<div class="callout">Email addresses are no longer shown for this event. The Secretary can help if you need to reach someone.</div>' : ''}
+    <div class="spread" style="align-items:center;margin:16px 0 8px;flex-wrap:wrap;row-gap:6px">
+      <label style="margin:0;display:flex;gap:8px;align-items:center;white-space:nowrap">Sort by
+        <select id="plateSort" style="width:auto" onchange="S.plateSort=this.value;renderEvent()">
+          <option value="category" ${by === 'category' ? 'selected' : ''}>Category</option>
+          <option value="name" ${by === 'name' ? 'selected' : ''}>Last name</option>
+          <option value="newest" ${by === 'newest' ? 'selected' : ''}>Newest</option>
+        </select></label>
+      <span class="row" style="flex:0 1 auto;gap:14px;flex-wrap:wrap"><button class="link" onclick="printPlates()">Print</button><button class="link" onclick="copyPlates()">Copy list</button><button class="link" onclick="downloadPlates()">Download CSV</button></span>
+    </div>
+    ${body}
+    ${e.past ? '' : '<button class="ghost big" style="margin-top:12px" onclick="editEvent()">Edit event</button>'}`;
+}
+async function savePlateEntry(ref) {
+  const d = { first: $('ed_first').value, last: $('ed_last').value, category: $('ed_category').value, item: $('ed_item').value, gf: $('ed_gf').checked, nf: $('ed_nf').checked, email: $('ed_email') ? $('ed_email').value : '' };
+  S.ev = await run('Saving…', 'cpPlateSave', S.ev.id, ref, d);
+  S.editingPlate = null; renderEvent(); toast('Saved.');
+}
+async function removePlate(ref) {
+  S.ev = await run('Removing…', 'cpPlateRemove', S.ev.id, ref);
+  S.removingPlate = null; renderEvent(); toast('Removed from the list.');
+}
+function plateTable() {
+  return [['Category', 'Item', 'Gluten free', 'Nut free', 'First name', 'Last name', 'Email', 'Added']]
+    .concat(sortedEntries().map(x => [x.category, x.item, x.gf ? 'Yes' : '', x.nf ? 'Yes' : '', x.first, x.last, x.email, x.added]));
+}
+function copyPlates() { copy(plateTable().map(r => r.map(c => String(c).replace(/[\t\n]/g, ' ')).join('\t')).join('\n'), 'List'); }
+function downloadPlates() {
+  const csv = plateTable().map(r => r.map(c => { let v = String(c == null ? '' : c); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\r\n');
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
+    a.download = S.ev.name.replace(/[^\w -]+/g, '').trim() + ' - bring a plate.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  } catch (err) { copyPlates(); }
+}
+function printPlates() {
+  const e = S.ev;
+  const groups = e.categories.map(c => {
+    const here = e.entries.filter(x => x.category === c).sort((a, b) => (a.last + a.first).localeCompare(b.last + b.first));
+    return `<h2>${esc(c)} (${here.length})</h2>` + (here.length
+      ? `<table><tr><th></th><th>Item</th><th>Notes</th><th>Brought by</th></tr>${here.map(x => `<tr><td class="tick"><span></span></td><td>${esc(x.item)}</td><td>${[x.gf ? 'Gluten free' : '', x.nf ? 'Nut free' : ''].filter(Boolean).join(', ')}</td><td>${esc(x.first)} ${esc(x.last)}</td></tr>`).join('')}</table>`
+      : '<p>Nothing listed.</p>');
+  }).join('');
+  $('print').innerHTML = `<h1>${esc(e.name)}: bring a plate</h1><p>${[e.dateText, e.startText ? 'starts ' + e.startText : '', e.location].filter(Boolean).map(esc).join(' · ')} · ${e.plates} plate${e.plates === 1 ? '' : 's'}</p>${groups}`;
+  window.print();
 }
 
 loadHome();

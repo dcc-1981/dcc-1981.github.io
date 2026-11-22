@@ -26,11 +26,12 @@ const SH = {
   STATS: 'Stats',
   SETTINGS: 'Settings',
   COORDS: 'Coordinators',
+  PLATES: 'Plates',
 };
 
 const HEADERS = {
   [SH.EVENTS]: ['Event ID', 'Event name', 'Type', 'Date', 'Location', 'Coordinator', 'Coordinator email',
-    'Status', 'Extra questions', 'Group emails', 'Sign-up form link', 'Form edit link', 'Form ID', 'Thank-yous drafted', 'Notes'],
+    'Status', 'Extra questions', 'Group emails', 'Format', 'Start time', 'Sign-up form link', 'Form edit link', 'Form ID', 'Thank-yous drafted', 'Notes'],
   [SH.SLOTS]: ['Event ID', 'Slot #', 'Date', 'Start', 'End', 'Role / task', 'Spots', 'Description', 'Filled', 'Remaining'],
   [SH.TEMPLATES]: ['Template', 'Day offset', 'Start', 'End', 'Role / task', 'Spots', 'Description', 'Extra questions'],
   [SH.SIGNUPS]: ['Timestamp', 'Event ID', 'Event name', 'Slot #', 'Role / task', 'Slot date', 'Start', 'End',
@@ -40,7 +41,16 @@ const HEADERS = {
     'Last helped', 'Events', 'Shifts', 'Total hours'],
   [SH.SETTINGS]: ['Setting', 'Value', 'Help'],
   [SH.COORDS]: ['Name', 'Email', 'Active', 'Page link', 'Welcome email', 'Key'],
+  // Bring-a-plate sign-ups: kept apart from Sign-ups so they never touch timeslot hours or stats.
+  [SH.PLATES]: ['Timestamp', 'Event ID', 'Event name', 'First name', 'Last name', 'Category', 'Item',
+    'Gluten free', 'Nut free', 'Email', 'Status', 'Reminder', 'Ref'],
 };
+
+// Event formats (Events tab "Format" column). Blank means timeslots, so older events need no change.
+const FORMAT_SLOTS = 'Timeslots';
+const FORMAT_PLATE = 'Bring a plate';
+const PLATE_CATEGORIES = ['Sweet', 'Savoury', 'Drinks', 'Other'];
+const PLATE_STATUSES = ['Confirmed', 'Removed'];
 
 // Wembley PS P&C Brand Identity Guide v1.1 (Oct 2026). The guide wins if these ever differ.
 const BRAND = {
@@ -124,6 +134,13 @@ const DEFAULT_SETTINGS = [
   ['Group reminder body', 'Hi everyone,\n\nJust a friendly reminder that you\'re rostered on for {EventName} on {EventDate} at {Location}, {SessionTime}. This session\'s roles:\n{Shifts}\n\nIf you can no longer make it, please reply so we can find someone to cover.\n\nSee you there!\n{SenderName}\n{PCName}', ''],
   ['Group thank-you subject', 'Thank you for helping at {EventName}', ''],
   ['Group thank-you body', 'Hi everyone,\n\nThank you for helping out at {EventName}. We really couldn\'t do it without people like you, and it made a real difference.\n\nThanks again,\n{SenderName}', 'Kept short and personal on purpose. {VolunteerCount} {TotalHours} and {ShiftCount} are available if you ever want them.'],
+  ['Plate share message', 'Can you bring a plate to {EventName}? It\'s on {EventDate}{StartText} at {Location}. See what\'s already covered and add yours here: {FormLink}\n\nThank you, every plate helps.', 'The message coordinators copy for bring-a-plate events. Placeholders: {EventName} {EventDate} {StartText} {Location} {FormLink} {PCName}'],
+  ['Plate privacy note', 'Your name and email are only seen by the event coordinator and the P&C executive. The list above only shows what\'s being brought, never who is bringing it.', 'Shown on every bring-a-plate sign-up form.'],
+  ['Plate confirmation subject', 'Thanks for bringing a plate to {EventName}', 'Placeholders: {FirstName} {EventName} {EventDate} {StartText} {Location} {Shifts} {DupNote} {Coordinator} {CoordinatorEmail} {SenderName} {PCName}. {DupNote} is a short heads-up when something similar is already on the list (or nothing).'],
+  ['Plate confirmation body', 'Hi {FirstName},\n\nThanks for offering to bring a plate to {EventName} ({EventDate}{StartText}, {Location}). Here\'s what you\'re bringing:\n{Shifts}\n\n{DupNote}If your plans change, just reply to this email and we\'ll sort it out.\n\nThank you!\n{SenderName}\n{PCName}', ''],
+  ['Plate reminder days before', '1', 'How many days before a bring-a-plate event the reminder goes out (uses the Reminder emails setting: Send, Draft or Off).'],
+  ['Plate reminder subject', 'Reminder: {EventName} is tomorrow', 'Used when Plate reminder days before is 1. Otherwise the subject says the date.'],
+  ['Plate reminder body', 'Hi {FirstName},\n\nJust a reminder that {EventName} is on {EventDate}{StartText} at {Location}, and you\'re bringing:\n{Shifts}\n\nIf anything\'s changed, just reply to let us know.\n\nSee you there!\n{SenderName}\n{PCName}', ''],
   ['Thank-you style', 'Personal', 'Personal = a plain email that reads like a note from the coordinator (no design, no footer). Branded = the P&C email design.'],
   ['Thank-you subject', 'Thank you for helping at {EventName}', ''],
   ['Thank-you body', 'Hi {FirstName},\n\nThank you for helping out at {EventName}. We really couldn\'t do it without people like you, and it made a real difference.\n\nThanks again,\n{SenderName}', 'Signed by the event coordinator (or Sender name if there isn\'t one).'],
@@ -173,14 +190,14 @@ function menuBuildForm() {
 function menuFilterEvent() {
   const id = selectedEventId_();
   if (!id) return;
-  [SH.SLOTS, SH.SIGNUPS].forEach(name => filterSheetByEvent_(name, id));
+  [SH.SLOTS, SH.SIGNUPS, SH.PLATES].forEach(name => filterSheetByEvent_(name, id));
   ss_().setActiveSheet(sheet_(SH.SLOTS));
   toast_(`Showing ${id} only. Use "Show all rows" to undo.`);
 }
 
 function menuClearFilters() {
   requireUi_();
-  [SH.SLOTS, SH.SIGNUPS].forEach(name => {
+  [SH.SLOTS, SH.SIGNUPS, SH.PLATES].forEach(name => {
     const f = sheet_(name).getFilter();
     if (f) f.remove();
   });
@@ -233,7 +250,7 @@ function menuRefreshAll() {
 function setupRoster() {
   requireUi_();
   const ss = ss_();
-  const order = [SH.EVENTS, SH.SLOTS, SH.SIGNUPS, SH.VOLUNTEERS, SH.COORDS, SH.TEMPLATES, SH.STATS, SH.SETTINGS];
+  const order = [SH.EVENTS, SH.SLOTS, SH.SIGNUPS, SH.PLATES, SH.VOLUNTEERS, SH.COORDS, SH.TEMPLATES, SH.STATS, SH.SETTINGS];
   order.forEach((name, i) => {
     let sh = ss.getSheetByName(name);
     if (!sh) sh = ss.insertSheet(name, i);
@@ -302,6 +319,7 @@ const TAB_COLOURS = {
   [SH.STATS]: BRAND.navy,
   [SH.SETTINGS]: BRAND.midGrey,
   [SH.COORDS]: BRAND.deepNavy,
+  [SH.PLATES]: BRAND.cyan,
 };
 
 /** Brand styling for a data tab: Lato body, navy Nunito header row, Panel Tint banding. */
@@ -330,6 +348,8 @@ function formatSheets_() {
   setValidationList_(ev, 'Group emails', ['Yes', 'No']);
   setColumnFormat_(ev, 'Thank-yous drafted', 'd mmm yyyy');
   hideColumns_(ev, ['Form ID']);
+  setValidationList_(ev, 'Format', [FORMAT_SLOTS, FORMAT_PLATE]);
+  setColumnFormat_(ev, 'Start time', 'h:mm am/pm');
 
   const sl = sheet_(SH.SLOTS);
   setColumnFormat_(sl, 'Date', 'ddd d mmm yyyy');
@@ -359,6 +379,14 @@ function formatSheets_() {
   const co = sheet_(SH.COORDS);
   setValidationList_(co, 'Active', ['Yes', 'No']);
   hideColumns_(co, ['Key']);
+
+  const pl = sheet_(SH.PLATES);
+  setColumnFormat_(pl, 'Timestamp', 'd mmm yyyy h:mm am/pm');
+  setValidationList_(pl, 'Category', PLATE_CATEGORIES);
+  setValidationList_(pl, 'Gluten free', ['Yes', 'No']);
+  setValidationList_(pl, 'Nut free', ['Yes', 'No']);
+  setValidationList_(pl, 'Status', PLATE_STATUSES);
+  hideColumns_(pl, ['Ref']);
 
   const vo = sheet_(SH.VOLUNTEERS);
   setColumnFormat_(vo, 'Phone', '@');
@@ -454,6 +482,19 @@ function createEventFromDialog(d) {
   if (!d.name || !d.date || !d.type) throw new Error('Event name, type and date are required.');
   const date = keyToDate_(d.date);
   const id = nextEventId_();
+  if (d.kind === 'plate') {
+    const start = parseTime_(d.startTime);
+    if (start == null) throw new Error('Add the start time.');
+    appendObjects_(SH.EVENTS, [{
+      'Event ID': id, 'Event name': d.name.trim(), 'Type': d.type, 'Date': date, 'Format': FORMAT_PLATE,
+      'Start time': fmtTime_(start, 'sheet'), 'Location': (d.location || '').trim(), 'Coordinator': (d.coordinator || '').trim(),
+      'Coordinator email': (d.coordinatorEmail || '').trim(), 'Status': 'Draft',
+    }]);
+    const url = d.createForm ? buildForm_(id).url : '';
+    filterSheetByEvent_(SH.PLATES, id);
+    ss_().setActiveSheet(sheet_(SH.PLATES));
+    return { id, slots: 0, url, plate: true };
+  }
   let extra = (d.extraQuestions || '').trim();
   let copied = [];
 
@@ -561,6 +602,8 @@ function templateSlots_(name) {
 function events_() {
   const t = getTable_(SH.EVENTS);
   return t.rows.map((r, i) => ({
+    format: /^bring a plate$/i.test(String(r['Format'] || '').trim()) ? FORMAT_PLATE : FORMAT_SLOTS,
+    startTime: parseTime_(t.disp[i]['Start time']),
     row: i,
     id: String(r['Event ID']).trim(),
     name: String(r['Event name']).trim(),
@@ -576,6 +619,8 @@ function events_() {
     formId: String(r['Form ID'] || ''),
   })).filter(e => e.id);
 }
+
+function isPlate_(ev) { return !!ev && ev.format === FORMAT_PLATE; }
 
 function getEvent_(id) {
   id = String(id || '').trim().toUpperCase();
@@ -663,6 +708,7 @@ function buildForm_(eventId) {
   const ev = getEvent_(eventId);
   if (!ev) throw new Error(`Can't find event ${eventId} on the Events tab.`);
   if (!ev.date) throw new Error(`${ev.id} needs a date first.`);
+  if (isPlate_(ev)) return buildPlateForm_(ev);
   const st = settings_();
   assignSlotNumbers_(ev);
   const slots = slots_(ev);
@@ -871,6 +917,7 @@ function openAllForms_() {
 
 /** Rebuilds slot choices (with spots left) and opens/closes the form. */
 function refreshEventForm_(ev, form) {
+  if (isPlate_(ev)) return refreshPlateForm_(ev, form);
   writeSlotCounts_(ev);
   if (!ev.formId) return;
   if (!form) { try { form = FormApp.openById(ev.formId); } catch (e) { return; } }
@@ -990,7 +1037,8 @@ function onRosterFormSubmit(e) {
       if (vals[i] instanceof Date && h !== 'Timestamp') ans[h] = vals[i];
       else if (ans[h] === undefined || ans[h] === '') { if (vals[i] !== '') ans[h] = vals[i]; }
     });
-    processSignup_(ev, ans, vals[0] instanceof Date ? vals[0] : new Date());
+    if (isPlate_(ev)) processPlateSubmit_(ev, ans, vals[0] instanceof Date ? vals[0] : new Date());
+    else processSignup_(ev, ans, vals[0] instanceof Date ? vals[0] : new Date());
   } finally {
     lock.releaseLock();
   }
@@ -1253,6 +1301,8 @@ function dailyRosterJob() {
       g.rows.forEach(i => t.set(i, 'Reminder', (mode === 'send' ? 'Sent ' : 'Drafted ') + fmtDate_(new Date(), 'd MMM') + ' (group)'));
     });
     if (n) digest.push(`${n} reminder email(s) ${mode === 'send' ? 'sent' : 'saved in Gmail Drafts – please check and send'}.`);
+    const np = plateReminders_(st, mode, today);
+    if (np) digest.push(`${np} bring-a-plate reminder(s) ${mode === 'send' ? 'sent' : 'saved in Gmail Drafts – please check and send'}.`);
   }
 
   // 2. Auto-finish events and draft thank-yous.
@@ -1263,6 +1313,7 @@ function dailyRosterJob() {
       const last = slots_(ev).reduce((m, s) => dateKey_(s.date) > m ? dateKey_(s.date) : m, dateKey_(ev.date));
       if (daysBetween_(last, today) >= lag) {
         const res = closeEvent_(ev.id);
+        if (isPlate_(ev)) { digest.push(`${ev.name} (${ev.id}) finished: ${plateRows_(ev.id).filter(x => x.status === 'Confirmed').length} plate(s).`); return; }
         digest.push(`${ev.name} (${ev.id}) finished: ${res.drafts} thank-you draft(s) in Gmail, ${res.hours} hours recorded.`);
       }
     });
@@ -1757,6 +1808,14 @@ function signupsFor_(eventId) {
 }
 
 function eventCard_(ev, today) {
+  if (isPlate_(ev)) {
+    const entries = plateRows_(ev.id).filter(x => x.status === 'Confirmed');
+    return {
+      id: ev.id, name: ev.name, dateText: ev.date ? fmtDate_(ev.date, 'EEE d MMM yyyy') : '', dateKey: dateKey_(ev.date),
+      status: ev.status, plate: true, plates: entries.length, counts: plateCounts_(entries),
+      past: !!ev.date && dateKey_(ev.date) < today,
+    };
+  }
   const counts = activeCounts_(ev.id);
   let spots = 0, filled = 0, unlimited = false;
   const slots = slots_(ev);
@@ -1770,6 +1829,7 @@ function eventCard_(ev, today) {
 }
 
 function shareText_(ev, st) {
+  if (isPlate_(ev)) return fill_(st['Plate share message'], plateVars_(ev, st, ''));
   return fill_(st['Share message'], {
     EventName: ev.name, EventDate: ev.date ? fmtDate_(ev.date, 'EEEE d MMMM') : '', Location: ev.location || 'school',
     FormLink: ev.formUrl || '', PCName: st['P&C name'] || '',
@@ -1783,12 +1843,12 @@ function cpLoad(key) {
   const today = todayKey_();
   const mine = events_().filter(e => e.coordinatorEmail.toLowerCase() === c.email)
     .sort((a, b) => (a.date || 0) - (b.date || 0)).map(e => eventCard_(e, today));
-  const past = events_().filter(e => e.date).sort((a, b) => b.date - a.date).slice(0, 40)
+  const past = events_().filter(e => e.date && !isPlate_(e)).sort((a, b) => b.date - a.date).slice(0, 40)
     .map(e => ({ id: e.id, label: `${e.name} (${fmtDate_(e.date, 'MMM yyyy')})` }));
   const logo = logoBlob_(st);
   return {
     name: c.name, types: splitList_(st['Event types']), wwcTypes: splitList_(st['WWC required for types']),
-    events: mine, templates: templateNames_(), pastEvents: past,
+    events: mine, templates: templateNames_(), pastEvents: past, plateCategories: PLATE_CATEGORIES,
     logo: logo ? 'data:' + logo.getContentType() + ';base64,' + Utilities.base64Encode(logo.getBytes()) : '',
     pcName: st['P&C name'],
     timeChangeEmails: isYes_(st['Send time-change emails']),
@@ -1803,6 +1863,7 @@ function cpEvent(key, id) {
 }
 
 function eventDetail_(ev) {
+  if (isPlate_(ev)) return plateDetail_(ev);
   const st = settings_();
   const today = todayKey_();
   const people = signupsFor_(ev.id);
@@ -1864,6 +1925,9 @@ function cpSaveEvent(key, d) {
   try {
     const name = clip_(d.name, 120);
     if (!name) throw new Error('Give the event a name.');
+    const existingEv = d.id ? ownEvent_(c, d.id) : null;
+    if (existingEv ? isPlate_(existingEv) : d.format === 'plate') return savePlateEvent_(c, d, existingEv, name);
+    if (d.format === 'plate') throw new Error('This event uses timeslots, so it can\'t be changed to bring-a-plate. Create a new event instead.');
     d.location = clip_(d.location, 120); d.extra = clip_(d.extra, 1500);
     (d.slots || []).forEach(s => { s.role = clip_(s.role, 80); s.desc = clip_(s.desc, 200); });
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.date || ''))) throw new Error('Choose the event date.');
@@ -2099,6 +2163,391 @@ function vmCancel(token, ref) {
   return vmLoad(token);
 }
 
+
+/* ============================== Bring a plate ==============================
+ * A second kind of event: families say what food or drink they'll bring. No slots and no hours.
+ * Each event still gets its own Google Form (published, open to anyone with the link, owner-only
+ * editing, like timeslot forms). A form can't show a live list, so its description is rewritten on
+ * every response with what's covered by category, never who is bringing it. Entries live on the
+ * Plates tab. Coordinators see full details for their own events on the coordinator page (contact
+ * details hidden after the usual number of days).
+ */
+
+/** Plates rows for one event. */
+function plateRows_(eventId) {
+  const t = getTable_(SH.PLATES);
+  return t.rows.map((r, i) => ({
+    i, ref: String(r['Ref'] || ''), first: String(r['First name'] || ''), last: String(r['Last name'] || ''),
+    category: String(r['Category'] || 'Other'), item: String(r['Item'] || ''),
+    gf: isYes_(r['Gluten free']), nf: isYes_(r['Nut free']), email: String(r['Email'] || '').trim(),
+    status: String(r['Status'] || 'Confirmed') || 'Confirmed', reminder: String(r['Reminder'] || ''),
+    at: r['Timestamp'] instanceof Date ? r['Timestamp'] : null,
+  })).filter((x, i) => String(t.rows[i]['Event ID']).trim().toUpperCase() === String(eventId).toUpperCase());
+}
+
+function plateCounts_(entries) {
+  const c = {};
+  PLATE_CATEGORIES.forEach(k => { c[k] = 0; });
+  entries.forEach(x => { c[x.category] = (c[x.category] || 0) + 1; });
+  return c;
+}
+
+function plateTags_(x) { return [x.gf ? 'gluten free' : '', x.nf ? 'nut free' : ''].filter(String); }
+
+// Questions on a bring-a-plate form. Changing these after forms exist breaks matching.
+const PQ = {
+  FIRST: 'First name',
+  LAST: 'Last name',
+  CATEGORY: 'Category',
+  ITEM: 'What are you bringing?',
+  DIET: 'Is it… (tick any that apply)',
+  EMAIL: 'Email (optional)',
+};
+const PLATE_DIET = ['Gluten free', 'Nut free'];
+
+/** Creates or updates the bring-a-plate Google Form for an event. Same publishing, sharing and response handling as timeslot forms. */
+function buildPlateForm_(ev) {
+  const st = settings_();
+  let form = null;
+  if (ev.formId) { try { form = FormApp.openById(ev.formId); } catch (e) { form = null; } }
+  const created = !form;
+  const title = `${ev.name} – bring a plate`;
+  if (created) form = createForm_(title, st);
+  form.setTitle(title)
+    .setConfirmationMessage('Thank you! The list above now includes your plate. You can add another if you like.')
+    .setShowLinkToRespondAgain(true)
+    .setAllowResponseEdits(false);
+  // Respondents must never see other people's answers (names, emails).
+  try { form.setPublishingSummary(false); } catch (e) { Logger.log('setPublishingSummary(false) failed: ' + (e && e.message)); }
+  openFormToEveryone_(form, true);
+
+  ensureItem_(form, PQ.FIRST, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(true);
+  ensureItem_(form, PQ.LAST, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(true);
+  ensureItem_(form, PQ.CATEGORY, FormApp.ItemType.MULTIPLE_CHOICE, () => form.addMultipleChoiceItem()).asMultipleChoiceItem()
+    .setChoiceValues(PLATE_CATEGORIES).setRequired(true);
+  ensureItem_(form, PQ.ITEM, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(true)
+    .setHelpText('This appears in the list at the top, without your name. Please check it first so we get a good mix.');
+  ensureItem_(form, PQ.DIET, FormApp.ItemType.CHECKBOX, () => form.addCheckboxItem()).asCheckboxItem()
+    .setChoiceValues(PLATE_DIET).setRequired(false);
+  ensureItem_(form, PQ.EMAIL, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(false)
+    .setHelpText('Only used to send you a confirmation and a reminder the day before.')
+    .setValidation(FormApp.createTextValidation().requireTextIsEmail().setHelpText('Please enter a valid email address, or leave it blank.').build());
+  [PQ.FIRST, PQ.LAST, PQ.CATEGORY, PQ.ITEM, PQ.DIET, PQ.EMAIL].forEach((t, i) => {
+    const it = findItem_(form, t);
+    if (it && it.getIndex() !== i) form.moveItem(it.getIndex(), i);
+  });
+
+  if (created) {
+    form.setDestination(FormApp.DestinationType.SPREADSHEET, ss_().getId());
+    SpreadsheetApp.flush();
+    tidyResponseSheet_(form, ev.id);
+  }
+  const status = ev.status === 'Draft' ? 'Open' : ev.status;
+  updateEvent_(ev.id, { 'Sign-up form link': form.getPublishedUrl(), 'Form edit link': form.getEditUrl(), 'Form ID': form.getId(), 'Status': status });
+  const fresh = getEvent_(ev.id);
+  refreshPlateForm_(fresh, form);
+  return { created, url: form.getPublishedUrl() };
+}
+
+/**
+ * A Google Form can't show a live list, so the form's description is rewritten whenever the list changes:
+ * event details, then what's covered by category (counts, items, GF/NF), never names or emails.
+ * Also opens or closes the form to match the event.
+ */
+function refreshPlateForm_(ev, form) {
+  if (!ev || !ev.formId) return;
+  if (!form) { try { form = FormApp.openById(ev.formId); } catch (e) { return; } }
+  const st = settings_();
+  form.setDescription(plateDescription_(ev, st));
+  const today = todayKey_();
+  const accepting = (ev.status === 'Open' || ev.status === 'Draft') && (!ev.date || dateKey_(ev.date) >= today);
+  form.setAcceptingResponses(accepting);
+  if (!accepting) {
+    const contact = ev.coordinatorEmail ? ` Contact ${ev.coordinator || 'the coordinator'} at ${ev.coordinatorEmail} if you'd still like to bring something.` : '';
+    form.setCustomClosedFormMessage('Sign-ups for this event are now closed. Thank you!' + contact);
+  }
+}
+
+/** The form description: who/when/where, what's covered so far, privacy note and footer. Kept well under Google's length limit. */
+function plateDescription_(ev, st) {
+  const live = plateRows_(ev.id).filter(x => x.status === 'Confirmed');
+  const when = [ev.date ? fmtDate_(ev.date, 'EEEE d MMMM yyyy') : '', ev.startTime == null ? '' : fmtTime_(ev.startTime), ev.location].filter(String).join(' · ');
+  const lines = [`Can you bring a plate to share? Add what you're bringing below, so we get a good mix.`, '', when];
+  if (ev.coordinator || ev.coordinatorEmail) lines.push(`Questions? ${[ev.coordinator, ev.coordinatorEmail].filter(String).join(' – ')}`);
+  lines.push('', `WHAT'S COVERED SO FAR (${live.length})`);
+  const perCat = Math.max(8, Math.floor(1800 / Math.max(live.length, 1) * 4));
+  PLATE_CATEGORIES.forEach(k => {
+    const here = live.filter(x => x.category === k);
+    if (!here.length) { lines.push(`${k} (0): nothing yet`); return; }
+    const shown = here.slice(0, Math.min(perCat, 40)).map(x => {
+      const t = [x.gf ? 'GF' : '', x.nf ? 'NF' : ''].filter(String);
+      return x.item + (t.length ? ` (${t.join(', ')})` : '');
+    });
+    const more = here.length - shown.length;
+    lines.push(`${k} (${here.length}): ${shown.join(', ')}${more > 0 ? `, and ${more} more` : ''}`);
+  });
+  lines.push('GF = gluten free · NF = nut free');
+  if (st['Plate privacy note']) lines.push('', st['Plate privacy note']);
+  lines.push('', '———', footerLine_(st));
+  let text = lines.join('\n');
+  if (text.length > 3800) text = text.slice(0, 3790) + '…';
+  return text;
+}
+
+/** One bring-a-plate form response: save it, refresh the list on the form, confirm by email. onRosterFormSubmit holds the lock. */
+function processPlateSubmit_(ev, ans, timestamp) {
+  const st = settings_();
+  const diet = String(ans[PQ.DIET] || '');
+  let entry;
+  try {
+    entry = cleanPlateEntry_({
+      first: ans[PQ.FIRST], last: ans[PQ.LAST], category: ans[PQ.CATEGORY], item: ans[PQ.ITEM],
+      gf: /gluten/i.test(diet), nf: /nut/i.test(diet), email: ans[PQ.EMAIL],
+    });
+  } catch (e) {
+    Logger.log(`Bring-a-plate response for ${ev.id} skipped: ${e && e.message}`);
+    return null;
+  }
+  const existing = plateRows_(ev.id).filter(x => x.status === 'Confirmed');
+  const similar = similarItems_(entry.item, existing.map(x => x.item));
+  appendObjects_(SH.PLATES, [{
+    'Timestamp': timestamp, 'Event ID': ev.id, 'Event name': ev.name, 'First name': entry.first, 'Last name': entry.last,
+    'Category': entry.category, 'Item': entry.item, 'Gluten free': entry.gf ? 'Yes' : 'No', 'Nut free': entry.nf ? 'Yes' : 'No',
+    'Email': entry.email, 'Status': 'Confirmed', 'Ref': newRef_(),
+  }]);
+  refreshPlateForm_(getEvent_(ev.id));
+  let emailed = false;
+  if (entry.email && isYes_(st['Send sign-up confirmations'])) {
+    try {
+      const m = plateEmail_(ev, st, entry, 'Thanks for bringing a plate', st['Plate confirmation subject'], st['Plate confirmation body'], similar);
+      MailApp.sendEmail(clean_({ to: entry.email, subject: m.subject, body: m.text, htmlBody: m.html, inlineImages: m.inlineImages, name: fromName_(st), replyTo: replyTo_(ev, st) }));
+      emailed = true;
+    } catch (e) {
+      Logger.log(`Plate confirmation to ${entry.email} for ${ev.id} failed: ${e && e.message}`);
+    }
+  }
+  return { entry, similar, emailed };
+}
+
+/** Checks and tidies one entry from the form or the coordinator page. */
+function cleanPlateEntry_(d) {
+  d = d || {};
+  const e = {
+    first: clip_(d.first, 60), last: clip_(d.last, 60), category: String(d.category || '').trim(),
+    item: clip_(d.item, 120), gf: !!d.gf && d.gf !== 'No', nf: !!d.nf && d.nf !== 'No', email: clip_(d.email, 254).toLowerCase(),
+  };
+  if (!e.first || !e.last) throw new Error('Please add your first and last name.');
+  if (PLATE_CATEGORIES.indexOf(e.category) < 0) throw new Error('Please choose a category.');
+  if (!e.item) throw new Error('Please say what you\'re bringing.');
+  if (e.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.email)) throw new Error('That email address doesn\'t look right.');
+  return e;
+}
+
+/** Placeholders for bring-a-plate emails and the share message. */
+function plateVars_(ev, st, first) {
+  return {
+    FirstName: first || 'there', EventName: ev.name, EventDate: ev.date ? fmtDate_(ev.date, 'EEEE d MMMM') : '',
+    StartText: ev.startTime == null ? '' : ' at ' + fmtTime_(ev.startTime), Location: ev.location || 'school',
+    FormLink: ev.formUrl || '', Coordinator: ev.coordinator || '', CoordinatorEmail: ev.coordinatorEmail || '',
+    SenderName: ev.coordinator || st['Sender name'] || 'The P&C team', PCName: st['P&C name'] || '',
+    ManageLine: 'If your plans change, just reply to this email and we\'ll sort it out.', DupNote: '',
+  };
+}
+
+/** One person's plate(s) as a branded (or plain) email, using the same builder as the roster's other emails. */
+function plateEmail_(ev, st, entry, kicker, subjectTpl, bodyTpl, similar) {
+  const list = Array.isArray(entry) ? entry : [entry];
+  const shifts = list.map(x => {
+    const tags = plateTags_(x);
+    return {
+      date: ev.date, role: x.item, start: ev.startTime, end: null,
+      text: `• ${x.category}: ${x.item}${tags.length ? ' (' + tags.join(', ') + ')' : ''}`,
+      note: [x.category].concat(tags.map(t => t.charAt(0).toUpperCase() + t.slice(1))).join(' · '),
+    };
+  });
+  const vars = plateVars_(ev, st, list[0].first);
+  vars.DupNote = similar && similar.length
+    ? `Just so you know, the list already has ${similar.map(x => '“' + x + '”').join(', ')}. That's completely fine, or reply if you'd like to switch to something else.\n\n`
+    : '';
+  return composeEmail_(kicker, subjectTpl, bodyTpl, vars, shifts, ev, st);
+}
+
+/** Reminders for bring-a-plate events (by default the day before). Returns how many went out. */
+function plateReminders_(st, mode, today) {
+  const days = Number(st['Plate reminder days before']);
+  const before = isNaN(days) || String(st['Plate reminder days before']).trim() === '' ? 1 : days;
+  const target = dateKey_(addDays_(keyToDate_(today), before));
+  const evs = {};
+  events_().forEach(ev => { if (isPlate_(ev) && ev.status !== 'Done' && ev.date && dateKey_(ev.date) === target) evs[ev.id] = ev; });
+  if (!Object.keys(evs).length) return 0;
+  const t = getTable_(SH.PLATES);
+  const people = {};
+  t.rows.forEach((r, i) => {
+    const ev = evs[String(r['Event ID']).trim()];
+    if (!ev || String(r['Status'] || 'Confirmed') !== 'Confirmed' || String(r['Reminder']).trim() || !String(r['Email']).trim()) return;
+    const k = ev.id + '|' + String(r['Email']).trim().toLowerCase();
+    (people[k] = people[k] || { ev, email: String(r['Email']).trim(), rows: [], entries: [] }).rows.push(i);
+    people[k].entries.push({ first: String(r['First name']), category: String(r['Category']), item: String(r['Item']), gf: isYes_(r['Gluten free']), nf: isYes_(r['Nut free']) });
+  });
+  let n = 0;
+  Object.keys(people).forEach(k => {
+    const g = people[k];
+    const subjectTpl = before === 1 ? st['Plate reminder subject'] : 'Reminder: {EventName} on {EventDate}';
+    try {
+      const m = plateEmail_(g.ev, st, g.entries, 'Reminder', subjectTpl, st['Plate reminder body']);
+      const opts = clean_({ htmlBody: m.html, inlineImages: m.inlineImages, name: fromName_(st), replyTo: replyTo_(g.ev, st) });
+      if (mode === 'send') GmailApp.sendEmail(g.email, m.subject, m.text, opts); else GmailApp.createDraft(g.email, m.subject, m.text, opts);
+      g.rows.forEach(i => t.set(i, 'Reminder', (mode === 'send' ? 'Sent ' : 'Drafted ') + fmtDate_(new Date(), 'd MMM')));
+      n++;
+    } catch (e) {
+      Logger.log(`Plate reminder to ${g.email} for ${g.ev.id} failed: ${e && e.message}`);
+    }
+  });
+  return n;
+}
+
+/** The coordinator's daily update lines for a bring-a-plate event, or '' when there's no news. */
+function plateUpdateLines_(ev, st, today, since, nudgeDays) {
+  if (dateKey_(ev.date) < today) return '';
+  const entries = plateRows_(ev.id);
+  const live = entries.filter(x => x.status === 'Confirmed');
+  const fresh = live.filter(x => x.at && x.at >= since);
+  const counts = plateCounts_(live);
+  const gaps = PLATE_CATEGORIES.filter(k => !counts[k]);
+  const nudge = gaps.length && daysBetween_(today, dateKey_(ev.date)) === nudgeDays;
+  if (!fresh.length && !nudge) return '';
+  const lines = [`${ev.name} – ${fmtDate_(ev.date, 'EEE d MMM')} (bring a plate)`];
+  if (fresh.length) lines.push('New: ' + fresh.map(x => `${x.first} ${x.last} – ${x.item} (${x.category})`).join('; '));
+  lines.push('So far: ' + PLATE_CATEGORIES.map(k => `${k} ${counts[k]}`).join(' · '));
+  if (nudge) lines.push(`\nNothing yet for ${gaps.join(', ')}. Here's a message you can paste into WhatsApp or the newsletter:\n\n${shareText_(ev, st)}`);
+  return lines.join('\n');
+}
+
+/** The coordinator's full view of a bring-a-plate event. */
+function plateDetail_(ev) {
+  const st = settings_();
+  const today = todayKey_();
+  const hideAfter = Number(st['Hide contact details after (days)']);
+  const hideContacts = !!ev.date && !isNaN(hideAfter) && String(st['Hide contact details after (days)']).trim() !== '' && daysBetween_(dateKey_(ev.date), today) > hideAfter;
+  const live = plateRows_(ev.id).filter(x => x.status === 'Confirmed');
+  return {
+    id: ev.id, plate: true, name: ev.name, type: ev.type, date: dateKey_(ev.date), dateText: ev.date ? fmtDate_(ev.date, 'EEE d MMM yyyy') : '',
+    startTime: hhmm_(ev.startTime), startText: ev.startTime == null ? '' : fmtTime_(ev.startTime), location: ev.location,
+    coordinator: ev.coordinator, status: ev.status, formUrl: ev.formUrl, share: shareText_(ev, st),
+    past: !!ev.date && dateKey_(ev.date) < today, contactsHidden: hideContacts,
+    counts: plateCounts_(live), plates: live.length, categories: PLATE_CATEGORIES,
+    entries: live.map((x, i) => ({
+      similarTo: similarItems_(x.item, live.slice(0, i).map(y => y.item))[0] || '',
+      ref: x.ref, first: x.first, last: x.last, category: x.category, item: x.item, gf: x.gf, nf: x.nf,
+      email: hideContacts ? '' : x.email, added: x.at ? fmtDate_(x.at, 'd MMM h:mm a') : '', addedAt: x.at ? x.at.getTime() : 0,
+    })),
+  };
+}
+
+/** Create or update a bring-a-plate event from the coordinator page. cpSaveEvent already holds the lock. */
+function savePlateEvent_(c, d, existingEv, name) {
+  {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.date || ''))) throw new Error('Choose the event date.');
+    const start = parseTime_(d.startTime);
+    if (start == null) throw new Error('Add the start time.');
+    const st = settings_();
+    const type = splitList_(st['Event types']).indexOf(d.type) >= 0 ? d.type : (splitList_(st['Event types'])[0] || 'Event');
+    const fields = {
+      'Event name': name, 'Type': type, 'Date': keyToDate_(d.date), 'Start time': fmtTime_(start, 'sheet'),
+      'Location': clip_(d.location, 120), 'Format': FORMAT_PLATE,
+    };
+    let id;
+    if (existingEv) {
+      id = existingEv.id;
+      updateEvent_(id, fields);
+    } else {
+      id = nextEventId_();
+      appendObjects_(SH.EVENTS, [Object.assign({ 'Event ID': id, 'Coordinator': c.name, 'Coordinator email': c.email, 'Status': 'Draft' }, fields)]);
+    }
+    buildForm_(id);
+    return plateDetail_(getEvent_(id));
+  }
+}
+
+/** Coordinator edits one entry. */
+function cpPlateSave(key, id, ref, d) {
+  const c = auth_(key);
+  const ev = ownEvent_(c, id);
+  if (!isPlate_(ev)) throw new Error('This isn\'t a bring-a-plate event.');
+  const entry = cleanPlateEntry_(d);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const t = getTable_(SH.PLATES);
+    const i = t.rows.findIndex(r => String(r['Ref']) === String(ref) && String(r['Event ID']).toUpperCase() === ev.id.toUpperCase());
+    if (i < 0) throw new Error('Can\'t find that entry.');
+    // An email hidden from the coordinator after the event comes back blank: keep the stored one.
+    if (!entry.email && plateDetail_(ev).contactsHidden) entry.email = String(t.rows[i]['Email'] || '');
+    t_setMany_(t, i, {
+      'First name': entry.first, 'Last name': entry.last, 'Category': entry.category, 'Item': entry.item,
+      'Gluten free': entry.gf ? 'Yes' : 'No', 'Nut free': entry.nf ? 'Yes' : 'No', 'Email': entry.email,
+    });
+    refreshPlateForm_(getEvent_(id));
+  } finally {
+    lock.releaseLock();
+  }
+  return plateDetail_(getEvent_(id));
+}
+
+/** Coordinator removes one entry (kept on the Plates tab as Removed). */
+function cpPlateRemove(key, id, ref) {
+  const c = auth_(key);
+  const ev = ownEvent_(c, id);
+  if (!isPlate_(ev)) throw new Error('This isn\'t a bring-a-plate event.');
+  const t = getTable_(SH.PLATES);
+  const i = t.rows.findIndex(r => String(r['Ref']) === String(ref) && String(r['Event ID']).toUpperCase() === ev.id.toUpperCase());
+  if (i < 0) throw new Error('Can\'t find that entry.');
+  t.set(i, 'Status', 'Removed');
+  refreshPlateForm_(getEvent_(id));
+  return plateDetail_(getEvent_(id));
+}
+
+/* ---------- Duplicate check (a heads-up only, never a block) ---------- */
+
+const PLATE_STOPWORDS = ['a', 'an', 'the', 'of', 'and', 'with', 'some', 'my', 'homemade', 'home', 'made', 'plate', 'tray', 'bowl'];
+
+function plateWords_(s) {
+  return String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/)
+    .filter(w => w && PLATE_STOPWORDS.indexOf(w) < 0)
+    .map(w => w.length > 3 && /ies$/.test(w) ? w.slice(0, -3) + 'y' : w.length > 3 && /es$/.test(w) && !/ses$/.test(w) ? w.slice(0, -2) : w.length > 3 && /s$/.test(w) ? w.slice(0, -1) : w);
+}
+
+function editDistance_(a, b) {
+  const m = a.length, n = b.length;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+
+/** True when two items look like the same thing: same words, one inside the other, mostly shared words, or a typo. */
+function itemsSimilar_(a, b) {
+  const wa = plateWords_(a), wb = plateWords_(b);
+  if (!wa.length || !wb.length) return false;
+  const ja = wa.join(' '), jb = wb.join(' ');
+  if (ja === jb) return true;
+  const shorter = ja.length <= jb.length ? ja : jb, longer = ja.length <= jb.length ? jb : ja;
+  if (shorter.length >= 4 && (' ' + longer + ' ').indexOf(' ' + shorter + ' ') >= 0) return true;
+  const sa = wa.filter((w, i) => wa.indexOf(w) === i), sb = wb.filter((w, i) => wb.indexOf(w) === i);
+  const shared = sa.filter(w => sb.indexOf(w) >= 0).length;
+  if (shared && shared / (sa.length + sb.length - shared) >= 0.5) return true;
+  return Math.max(ja.length, jb.length) >= 5 && editDistance_(ja, jb) <= Math.max(1, Math.floor(Math.max(ja.length, jb.length) * 0.15));
+}
+
+function similarItems_(item, items) {
+  const out = [];
+  (items || []).forEach(x => { if (itemsSimilar_(item, x) && out.indexOf(x) < 0) out.push(x); });
+  return out;
+}
+
 /* ---------- Coordinator daily updates ---------- */
 
 function coordinatorUpdates_(st) {
@@ -2109,6 +2558,11 @@ function coordinatorUpdates_(st) {
   const byCoord = {};
   events_().forEach(ev => {
     if (ev.status === 'Done' || !ev.coordinatorEmail || !ev.date) return;
+    if (isPlate_(ev)) {
+      const lines = plateUpdateLines_(ev, st, today, since, nudgeDays);
+      if (lines) { const k = ev.coordinatorEmail.toLowerCase(); (byCoord[k] = byCoord[k] || { name: ev.coordinator, events: [] }).events.push(lines); }
+      return;
+    }
     const slots = slots_(ev);
     const last = slots.reduce((m, s) => (dateKey_(s.date) > m ? dateKey_(s.date) : m), dateKey_(ev.date));
     if (last < today) return;

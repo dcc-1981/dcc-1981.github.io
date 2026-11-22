@@ -33,12 +33,19 @@
 <body>
   <div class="kicker">P&amp;C volunteer roster</div>
   <div class="rule"></div>
+  <label>Kind of sign-up</label>
+  <select id="kind" onchange="kindChanged()">
+    <option value="slots">Timeslots – people sign up for jobs at set times</option>
+    <option value="plate">Bring a plate – families say what food or drink they'll bring</option>
+  </select>
+
   <label>Event name</label>
   <input id="name" placeholder="e.g. Election day sausage sizzle">
 
   <div class="row">
     <div><label>Type</label><select id="type"></select></div>
     <div><label>Date</label><input id="date" type="date"></div>
+    <div class="plateOnly" style="display:none"><label>Start time</label><input id="startTime" type="time"></div>
   </div>
 
   <label>Location</label>
@@ -49,6 +56,7 @@
     <div><label>Coordinator email</label><input id="coordinatorEmail" type="email" placeholder="name@example.com"></div>
   </div>
 
+  <div class="slotsOnly">
   <label>Start from <span class="hint">– copies the slots, shifted to the new date</span></label>
   <select id="source">
     <option value="">Blank – I'll add slots myself</option>
@@ -66,9 +74,10 @@
     <option value="Yes">One group email (BCC) – best for big events</option>
     <option value="No">A personal email to each volunteer</option>
   </select>
+  </div>
 
   <label class="check"><input type="checkbox" id="createForm" checked> Create the sign-up form straight away</label>
-  <div class="hint">Untick if you want to tweak slots on the Slots tab first (then use “Create / update sign-up form”).</div>
+  <div class="hint" id="formHint">Untick if you want to tweak slots on the Slots tab first (then use “Create / update sign-up form”).</div>
 
   <button class="primary" id="go" onclick="go()">Create event</button>
   <button class="secondary" onclick="google.script.host.close()">Close</button>
@@ -87,6 +96,15 @@
 
     function v(id) { return document.getElementById(id).value; }
 
+    function kindChanged() {
+      var plate = v('kind') === 'plate';
+      document.querySelectorAll('.slotsOnly').forEach(function (el) { el.style.display = plate ? 'none' : ''; });
+      document.querySelectorAll('.plateOnly').forEach(function (el) { el.style.display = plate ? '' : 'none'; });
+      document.getElementById('formHint').textContent = plate
+        ? 'The form asks for name, category (Sweet, Savoury, Drinks, Other), what they\'re bringing, gluten free / nut free and an optional email. Its description lists what\'s covered so far, without names.'
+        : 'Untick if you want to tweak slots on the Slots tab first (then use “Create / update sign-up form”).';
+    }
+
     function show(text, ok) {
       var m = document.getElementById('msg');
       m.className = ok ? 'ok' : 'err';
@@ -98,20 +116,24 @@
 
     function go() {
       var data = {
+        kind: v('kind'), startTime: v('startTime'),
         name: v('name'), type: v('type'), date: v('date'), location: v('location'),
         coordinator: v('coordinator'), coordinatorEmail: v('coordinatorEmail'),
         source: v('source'), extraQuestions: v('extra'), groupEmails: v('groupEmails'),
         createForm: document.getElementById('createForm').checked
       };
       if (!data.name || !data.date) { show('Please enter an event name and date.', false); return; }
+      if (data.kind === 'plate' && !data.startTime) { show('Please enter the start time.', false); return; }
       var b = document.getElementById('go');
       b.disabled = true; b.textContent = 'Creating…';
       google.script.run
         .withSuccessHandler(function (r) {
           b.textContent = 'Done';
-          var text = r.id + ' created with ' + r.slots + ' slot(s).\n\n' +
-            (r.url ? 'Sign-up form link (share this with families):\n' :
-              'Next: add or edit slots on the Slots tab (now showing just this event), then use P&C Roster › Create / update sign-up form.');
+          var text = r.plate
+            ? r.id + ' created (bring a plate).\n\n' + (r.url ? 'Sign-up form link (share this with families):\n' : 'Next: use P&C Roster › Create / update sign-up form with the event selected.')
+            : r.id + ' created with ' + r.slots + ' slot(s).\n\n' +
+              (r.url ? 'Sign-up form link (share this with families):\n' :
+                'Next: add or edit slots on the Slots tab (now showing just this event), then use P&C Roster › Create / update sign-up form.');
           var m = show(text, true);
           if (r.url) {
             var a = document.createElement('a'); a.href = r.url; a.target = '_blank'; a.textContent = r.url;
