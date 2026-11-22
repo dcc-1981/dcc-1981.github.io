@@ -236,10 +236,12 @@ function menuSaveTemplate() {
 
 function menuRefreshAll() {
   requireUi_();
+  const repaired = repairPlateTimestamps_();
   const issues = refreshAll_();
   const formProblem = issues[0] === FORM_ACCESS_PROBLEM || issues[0] === DRIVE_SERVICE_MISSING ? issues.shift() : '';
-  if (formProblem || issues.length) {
-    alert_('Counts, forms and stats refreshed.' + (formProblem ? `\n\n⚠ ${formProblem}` : '') +
+  const repairLine = repaired ? `\n\nFilled ${repaired} missing sign-up time${repaired === 1 ? '' : 's'} on the Plates tab.` : '';
+  if (formProblem || issues.length || repaired) {
+    alert_('Counts, forms and stats refreshed.' + repairLine + (formProblem ? `\n\n⚠ ${formProblem}` : '') +
       (issues.length ? '\n\nSome slot times look worth a check (these are warnings only, nothing was changed):\n\n' + issues.join('\n\n') : ''));
   }
   else toast_('Counts, forms and stats refreshed.');
@@ -302,7 +304,9 @@ function setupRoster() {
       'Set both to Australia/Perth (File › Settings, and Apps Script › Project settings) so dates line up.');
   }
   const formProblem = openAllForms_();
-  const formLine = formProblem ? `\n\n⚠ ${formProblem}` : '';
+  const repaired = repairPlateTimestamps_();
+  const formLine = (formProblem ? `\n\n⚠ ${formProblem}` : '') +
+    (repaired ? `\n\nFilled ${repaired} missing sign-up time${repaired === 1 ? '' : 's'} on the Plates tab.` : '');
   if (jobsOwner) {
     alert_(`Tabs and formatting checked.\n\nThe automatic jobs (sign-ups, emails, daily check) already run under ${jobsOwner}, so nothing else was changed. You don't need to run Setup – just use P&C Roster › New event…${formLine}`);
     return;
@@ -1087,7 +1091,7 @@ function processSignup_(ev, ans, timestamp) {
     if (status !== 'Waitlist') counts[n] = (counts[n] || 0) + 1;
     const hrs = hoursBetween_(s.start, s.end);
     rows.push({
-      'Timestamp': timestamp, 'Event ID': ev.id, 'Event name': ev.name, 'Slot #': n, 'Role / task': s.role,
+      'Timestamp': validTimestamp_(timestamp), 'Event ID': ev.id, 'Event name': ev.name, 'Slot #': n, 'Role / task': s.role,
       'Slot date': s.date, 'Start': s.start == null ? '' : fmtTime_(s.start, 'sheet'), 'End': s.end == null ? '' : fmtTime_(s.end, 'sheet'),
       'Name': name, 'Email': email, 'Phone': phone, 'Child / class': child,
       'WWC number': needsWwc ? wwcNum : '', 'WWC expiry': needsWwc && wwcExp ? wwcExp : '',
@@ -2311,7 +2315,7 @@ function processPlateSubmit_(ev, ans, timestamp) {
   const existing = plateRows_(ev.id).filter(x => x.status === 'Confirmed');
   const similar = similarItems_(entry.item, existing.map(x => x.item));
   appendObjects_(SH.PLATES, [{
-    'Timestamp': timestamp, 'Event ID': ev.id, 'Event name': ev.name, 'First name': entry.first, 'Last name': entry.last,
+    'Timestamp': validTimestamp_(timestamp), 'Event ID': ev.id, 'Event name': ev.name, 'First name': entry.first, 'Last name': entry.last,
     'Category': entry.category, 'Item': entry.item, 'Gluten free': entry.gf ? 'Yes' : 'No', 'Nut free': entry.nf ? 'Yes' : 'No',
     'Email': entry.email, 'Status': 'Confirmed', 'Ref': newRef_(),
   }]);
@@ -2505,6 +2509,49 @@ function cpPlateRemove(key, id, ref) {
   t.set(i, 'Status', 'Removed');
   refreshPlateForm_(getEvent_(id));
   return plateDetail_(getEvent_(id));
+}
+
+/**
+ * Fills any blank Timestamp on the Plates tab from the matching row (same first name, last name and item)
+ * on that event's "Responses EV-…" tab. Each response row is used once. Returns how many were filled.
+ */
+function repairPlateTimestamps_() {
+  const t = getTable_(SH.PLATES);
+  const blanks = t.rows.map((r, i) => i).filter(i => !(t.rows[i]['Timestamp'] instanceof Date));
+  if (!blanks.length) return 0;
+  const key = (f, l, it) => [clip_(f, 60), clip_(l, 60), clip_(it, 120)].map(x => x.toLowerCase().replace(/\s+/g, ' ')).join('|');
+  const responses = {};
+  let fixed = 0;
+  blanks.forEach(i => {
+    const r = t.rows[i];
+    const evId = String(r['Event ID']).trim();
+    if (!(evId in responses)) responses[evId] = plateResponseRows_(evId, key);
+    const hit = responses[evId].filter(x => !x.used && x.key === key(r['First name'], r['Last name'], r['Item']))[0];
+    if (!hit) return;
+    hit.used = true;
+    t.set(i, 'Timestamp', hit.at);
+    fixed++;
+  });
+  if (fixed) Logger.log(`Filled ${fixed} missing Timestamp(s) on the Plates tab from the response tabs`);
+  return fixed;
+}
+
+/** Timestamped rows from an event's response tab, keyed on first name, last name and item. */
+function plateResponseRows_(evId, key) {
+  const ev = getEvent_(evId);
+  let sh = ss_().getSheetByName('Responses ' + evId);
+  if (!sh && ev && ev.formId) {
+    sh = ss_().getSheets().filter(x => {
+      try { return x.getFormUrl() && FormApp.openByUrl(x.getFormUrl()).getId() === ev.formId; } catch (e) { return false; }
+    })[0] || null;
+  }
+  if (!sh || sh.getLastRow() < 2) return [];
+  const vals = sh.getRange(1, 1, sh.getLastRow(), sh.getLastColumn()).getValues();
+  const h = vals[0].map(String);
+  const col = title => h.indexOf(title);
+  if (col(PQ.FIRST) < 0 || col(PQ.LAST) < 0 || col(PQ.ITEM) < 0) return [];
+  return vals.slice(1).filter(v => v[0] instanceof Date)
+    .map(v => ({ at: v[0], key: key(v[col(PQ.FIRST)], v[col(PQ.LAST)], v[col(PQ.ITEM)]), used: false }));
 }
 
 /* ---------- Duplicate check (a heads-up only, never a block) ---------- */
@@ -2929,7 +2976,24 @@ function appendObjects_(name, objs) {
   const sh = sheet_(name);
   const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
   const data = objs.map(o => headers.map(h => cellSafe_(h in o && o[h] != null ? o[h] : '')));
-  sh.getRange(sh.getLastRow() + 1, 1, data.length, headers.length).setValues(data);
+  const start = sh.getLastRow() + 1;
+  sh.getRange(start, 1, data.length, headers.length).setValues(data);
+  // Sign-up rows must never end up without a Timestamp: read it back and write it again if it didn't stick.
+  const tc = headers.indexOf('Timestamp');
+  if (tc >= 0 && objs.some(o => o['Timestamp'])) {
+    SpreadsheetApp.flush();
+    sh.getRange(start, tc + 1, data.length, 1).getValues().forEach((r, k) => {
+      if (objs[k]['Timestamp'] && !(r[0] instanceof Date && !isNaN(r[0].getTime()))) {
+        Logger.log(`${name}: Timestamp missing on row ${start + k} after writing; writing it again`);
+        sh.getRange(start + k, tc + 1).setValue(validTimestamp_(objs[k]['Timestamp']));
+      }
+    });
+  }
+}
+
+/** The given time if it's a real date, otherwise now. */
+function validTimestamp_(ts) {
+  return ts instanceof Date && !isNaN(ts.getTime()) ? ts : new Date();
 }
 
 function deleteRowsWhere_(name, pred) {
@@ -2984,6 +3048,9 @@ function filterSheetByEvent_(name, id) {
   if (existing) existing.remove();
   const c = colIndex_(sh, 'Event ID');
   if (c <= 0) return;
+  // No rows yet: don't filter. A filter over an empty tab hides the empty row 2, and the event's first
+  // sign-up is then written into that hidden row (its Timestamp came out blank on the Plates tab).
+  if (sh.getLastRow() < 2) return;
   const f = sh.getRange(1, 1, Math.max(sh.getLastRow(), 2), sh.getLastColumn()).createFilter();
   f.setColumnFilterCriteria(c, SpreadsheetApp.newFilterCriteria().whenTextEqualTo(id).build());
 }
