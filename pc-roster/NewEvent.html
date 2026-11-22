@@ -64,10 +64,24 @@
     <optgroup label="Copy a previous event" id="evs"></optgroup>
   </select>
 
+  </div>
+
+  <div class="plateOnly" style="display:none">
+  <label>Food categories <span class="hint">– separate with commas. Add a note after a colon, e.g. Savoury: Rooms 23 &amp; 24</span></label>
+  <textarea id="plateCategories" style="height:46px"></textarea>
+
+  <label>Tick boxes for dietary needs <span class="hint">– separate with commas, or None</span></label>
+  <input id="dietOptions">
+
+  <label>Notes for families <span class="hint">(optional) shown on the form and in their emails</span></label>
+  <textarea id="plateNotes" placeholder="e.g. Please bring food ready to serve on a disposable plate, labelled with your child's name."></textarea>
+  </div>
+
   <label>Extra questions <span class="hint">(optional) one per line. *Required. Choices in [Yes|No]</span></label>
   <textarea id="extra" placeholder="Can you bring a plate to share? [Yes|No]&#10;*Do you have a current food handling certificate? [Yes|No]"></textarea>
-  <div class="hint">Leave blank to use the template's or previous event's questions.</div>
+  <div class="hint slotsOnly">Leave blank to use the template's or previous event's questions.</div>
 
+  <div class="slotsOnly">
   <label>Reminders &amp; thank-yous</label>
   <select id="groupEmails">
     <option value="">Use the default from Settings</option>
@@ -92,6 +106,9 @@
       var ev = document.getElementById('evs');
       d.events.forEach(function (x) { ev.appendChild(new Option(x.label, 'E:' + x.id)); });
       document.getElementById('coordinatorEmail').value = d.adminEmail || '';
+      var pd = d.plateDefaults || { categories: 'Sweet, Savoury, Drinks, Other', diets: 'Gluten free, Nut free' };
+      document.getElementById('plateCategories').value = pd.categories;
+      document.getElementById('dietOptions').value = pd.diets;
     }).getDialogData();
 
     function v(id) { return document.getElementById(id).value; }
@@ -100,8 +117,11 @@
       var plate = v('kind') === 'plate';
       document.querySelectorAll('.slotsOnly').forEach(function (el) { el.style.display = plate ? 'none' : ''; });
       document.querySelectorAll('.plateOnly').forEach(function (el) { el.style.display = plate ? '' : 'none'; });
+      document.getElementById('extra').placeholder = plate
+        ? '*Which room is your child in? [15|23|24|25]'
+        : 'Can you bring a plate to share? [Yes|No]\n*Do you have a current food handling certificate? [Yes|No]';
       document.getElementById('formHint').textContent = plate
-        ? 'The form asks for name, category (Sweet, Savoury, Drinks, Other), what they\'re bringing, gluten free / nut free and an optional email. Its description lists what\'s covered so far, without names.'
+        ? 'The form asks for name, category, what they\'re bringing, the dietary tick boxes, any extra questions and an optional email. Its description shows your notes and lists what\'s covered so far, without names.'
         : 'Untick if you want to tweak slots on the Slots tab first (then use “Create / update sign-up form”).';
     }
 
@@ -117,6 +137,7 @@
     function go() {
       var data = {
         kind: v('kind'), startTime: v('startTime'),
+        plateCategories: v('plateCategories'), dietOptions: v('dietOptions'), plateNotes: v('plateNotes'),
         name: v('name'), type: v('type'), date: v('date'), location: v('location'),
         coordinator: v('coordinator'), coordinatorEmail: v('coordinatorEmail'),
         source: v('source'), extraQuestions: v('extra'), groupEmails: v('groupEmails'),

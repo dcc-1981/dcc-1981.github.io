@@ -284,12 +284,18 @@ function newSlotsEvent() {
   renderEditor();
 }
 function newPlateEvent() {
-  S.draft = { plate: true, id: '', name: '', date: '', startTime: '', location: '', type: S.home.types[0] || 'Event' };
+  const pd = S.home.plateDefaults || { categories: 'Sweet, Savoury, Drinks, Other', diets: 'Gluten free, Nut free' };
+  S.draft = { plate: true, id: '', name: '', date: '', startTime: '', location: '', type: S.home.types[0] || 'Event',
+    plateCategories: pd.categories, dietOptions: pd.diets, plateNotes: '', extra: '' };
   renderPlateEditor();
 }
 function editEvent() {
   const e = S.ev;
-  if (e.plate) { S.draft = { plate: true, id: e.id, name: e.name, date: e.date, startTime: e.startTime, location: e.location, type: e.type }; return renderPlateEditor(); }
+  if (e.plate) {
+    S.draft = { plate: true, id: e.id, name: e.name, date: e.date, startTime: e.startTime, location: e.location, type: e.type,
+      plateCategories: e.plateCategories, dietOptions: e.dietOptions, plateNotes: e.plateNotes, extra: e.extra };
+    return renderPlateEditor();
+  }
   S.draft = { id: e.id, name: e.name, date: e.date, location: e.location, type: e.type, extra: e.extra, group: e.group, groupTouched: true, multiDay: e.multiDay,
     slots: e.slots.map(s => ({ n: s.n, date: s.date, start: s.start, end: s.end, role: s.role, spots: s.spots == null ? '' : s.spots, desc: s.desc, booked: s.people.length })),
     orig: Object.fromEntries(e.slots.map(s => [s.n, { start: s.start, end: s.end, date: s.date }])) };
@@ -530,6 +536,14 @@ function renderPlateEditor() {
       <div><label>Start time</label><input type="time" id="p_start" value="${esc(d.startTime)}"></div>
     </div>
     <label>Where</label><input id="p_location" value="${esc(d.location)}" placeholder="e.g. School oval">
+    <label>Food categories <span class="muted small">– separate with commas. Add a note after a colon</span></label>
+    <textarea id="p_categories" rows="2" placeholder="Savoury: Rooms 23 &amp; 24, Sweet or fruit: Rooms 15 &amp; 25">${esc(d.plateCategories)}</textarea>
+    <label>Tick boxes for dietary needs <span class="muted small">– separate with commas, or None</span></label>
+    <input id="p_diets" value="${esc(d.dietOptions)}" placeholder="Gluten free, Nut free, Vegetarian, Vegan">
+    <label>Notes for families <span class="muted small">(optional) shown on the form and in their emails</span></label>
+    <textarea id="p_notes" rows="3" placeholder="e.g. Please bring food ready to serve on a disposable plate, labelled with your child's name.">${esc(d.plateNotes)}</textarea>
+    <label>Extra questions <span class="muted small">(optional) one per line. * = required. Choices in [A|B|C]</span></label>
+    <textarea id="p_extra" rows="2" placeholder="*Which room is your child in? [15|23|24|25]">${esc(d.extra)}</textarea>
     <details ${d.type !== (h.types[0] || 'Event') ? 'open' : ''} style="margin-top:18px">
       <summary>More options</summary>
       <label>Type of event</label><select id="p_type">${h.types.map(t => `<option ${t === d.type ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
@@ -542,10 +556,12 @@ async function savePlate() {
   const d = S.draft, isNew = !d.id;
   ['name', 'date', 'location', 'type'].forEach(f => { d[f] = $('p_' + f).value; });
   d.startTime = $('p_start').value;
+  d.plateCategories = $('p_categories').value; d.dietOptions = $('p_diets').value; d.plateNotes = $('p_notes').value; d.extra = $('p_extra').value;
   if (!d.name.trim()) { toast('Give the event a name.', true); return; }
   if (!d.date) { toast('Choose the date.', true); return; }
   if (!d.startTime) { toast('Add the start time.', true); return; }
-  S.ev = await run(isNew ? 'Publishing your sign-up form…' : 'Saving…', 'cpSaveEvent', { id: d.id, format: 'plate', name: d.name, date: d.date, startTime: d.startTime, location: d.location, type: d.type });
+  S.ev = await run(isNew ? 'Publishing your sign-up form…' : 'Saving…', 'cpSaveEvent', { id: d.id, format: 'plate', name: d.name, date: d.date, startTime: d.startTime, location: d.location, type: d.type,
+    plateCategories: d.plateCategories, dietOptions: d.dietOptions, plateNotes: d.plateNotes, extra: d.extra });
   S.draft = null; S.plateSort = 'category';
   renderEvent(); window.scrollTo(0, 0);
   toast(isNew ? 'Your sign-up form is live. Copy the link or the message to share it.' : 'Saved. The form is updated too.');
@@ -560,15 +576,33 @@ function sortedEntries() {
   else list.sort((a, b) => b.addedAt - a.addedAt);
   return list;
 }
-function tagHtml(x) { return (x.gf ? '<span class="tag">GF</span>' : '') + (x.nf ? '<span class="tag">NF</span>' : ''); }
+function tagHtml(x) {
+  const codes = x.codes || [x.gf ? 'GF' : '', x.nf ? 'NF' : ''].filter(Boolean);
+  return codes.map(c => `<span class="tag">${esc(c)}</span>`).join('');
+}
+function catHead(c) {
+  const i = (S.ev.categoryInfo || []).find(x => x.name === c);
+  return esc(c) + (i && i.hint ? ` <span class="small muted" style="font-weight:400">– ${esc(i.hint)}</span>` : '');
+}
+// Diet options shown as columns / tick boxes: the event's own, plus any an entry still has from before.
+function dietCols() {
+  const e = S.ev, cols = (e.diets || ['Gluten free', 'Nut free']).slice();
+  e.entries.forEach(x => (x.diets || []).forEach(d => { if (!cols.some(c => c.toLowerCase() === d.toLowerCase())) cols.push(d); }));
+  return cols;
+}
+function hasDiet(x, d) { return (x.diets || [x.gf ? 'Gluten free' : '', x.nf ? 'Nut free' : '']).some(y => y.toLowerCase() === d.toLowerCase()); }
+function answer(x, q) { const a = (x.extras || []).find(y => y.q === q); return a ? a.a : ''; }
 function plateEntry(x) {
   const e = S.ev;
   if (S.editingPlate === x.ref) {
     return `<div class="card">
       <div class="row"><div><label>First name</label><input id="ed_first" value="${esc(x.first)}"></div><div><label>Last name</label><input id="ed_last" value="${esc(x.last)}"></div></div>
-      <label>Category</label><select id="ed_category">${e.categories.map(c => `<option ${c === x.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+      <label>Category</label><select id="ed_category">${(e.categoryInfo || e.categories.map(c => ({ name: c, label: c }))).map(c => `<option value="${esc(c.name)}" ${c.name === x.category ? 'selected' : ''}>${esc(c.label)}</option>`).join('')}</select>
       <label>What they're bringing</label><input id="ed_item" value="${esc(x.item)}">
-      <div class="ticks"><label><input type="checkbox" id="ed_gf" ${x.gf ? 'checked' : ''}> Gluten free</label><label><input type="checkbox" id="ed_nf" ${x.nf ? 'checked' : ''}> Nut free</label></div>
+      ${(e.diets || []).length ? `<div class="ticks">${(e.diets || []).map((d, k) => `<label><input type="checkbox" id="ed_diet${k}" ${hasDiet(x, d) ? 'checked' : ''}> ${esc(d)}</label>`).join('')}</div>` : ''}
+      ${(e.questions || []).map((q, k) => `<label>${esc(q.title)}</label>${q.options
+        ? `<select id="ed_q${k}"><option value=""></option>${q.options.map(o => `<option ${o === answer(x, q.title) ? 'selected' : ''}>${esc(o)}</option>`).join('')}${answer(x, q.title) && q.options.indexOf(answer(x, q.title)) < 0 ? `<option selected>${esc(answer(x, q.title))}</option>` : ''}</select>`
+        : `<input id="ed_q${k}" value="${esc(answer(x, q.title))}">`}`).join('')}
       ${e.contactsHidden ? '' : `<label>Email <span class="muted small">(optional)</span></label><input id="ed_email" inputmode="email" value="${esc(x.email)}">`}
       <div class="row" style="margin-top:12px"><button onclick="savePlateEntry('${esc(x.ref)}')">Save</button><button class="ghost" onclick="S.editingPlate=null;renderEvent()">Cancel</button></div>
     </div>`;
@@ -577,7 +611,7 @@ function plateEntry(x) {
     ? `<span class="row" style="flex:0 0 auto"><button class="link danger" onclick="removePlate('${esc(x.ref)}')">Yes, remove</button><button class="link" onclick="S.removingPlate=null;renderEvent()">Keep</button></span>`
     : `<span class="row" style="flex:0 0 auto;gap:14px"><button class="link" onclick="S.editingPlate='${esc(x.ref)}';S.removingPlate=null;renderEvent()">Edit</button><button class="link" onclick="S.removingPlate='${esc(x.ref)}';S.editingPlate=null;renderEvent()">Remove</button></span>`;
   return `<div class="person"><div class="who"><b>${esc(x.item)}</b>${tagHtml(x)}${x.similarTo ? ` <span class="pill warn" title="Looks like an earlier entry">Similar to ${esc(x.similarTo)}</span>` : ''}${S.plateSort === 'category' ? '' : ` <span class="small muted">· ${esc(x.category)}</span>`}
-      <div class="small">${esc(x.first)} ${esc(x.last)}${x.email ? ` · <span class="muted">${esc(x.email)}</span>` : ''}${x.added ? ` · <span class="muted">${esc(x.added)}</span>` : ''}</div></div>${action}</div>`;
+      <div class="small">${esc(x.first)} ${esc(x.last)}${x.email ? ` · <span class="muted">${esc(x.email)}</span>` : ''}${x.added ? ` · <span class="muted">${esc(x.added)}</span>` : ''}</div>${(x.extras || []).length ? `<div class="small muted">${x.extras.map(a => `${esc(a.q)}: <b>${esc(a.a)}</b>`).join(' · ')}</div>` : ''}</div>${action}</div>`;
 }
 function renderPlateEvent() {
   const e = S.ev, by = S.plateSort || 'category';
@@ -587,7 +621,7 @@ function renderPlateEvent() {
   else if (by === 'category') {
     body = e.categories.map(c => {
       const here = list.filter(x => x.category === c);
-      return `<div class="card"><div class="spread"><h3>${esc(c)}</h3><span class="pill ${here.length ? 'open' : 'warn'}">${here.length}</span></div>
+      return `<div class="card"><div class="spread"><h3>${catHead(c)}</h3><span class="pill ${here.length ? 'open' : 'warn'}">${here.length}</span></div>
         <div style="margin-top:4px">${here.length ? here.map(plateEntry).join('') : '<div class="small muted">Nothing yet</div>'}</div></div>`;
     }).join('');
   } else body = `<div class="card">${list.map(plateEntry).join('')}</div>`;
@@ -609,6 +643,7 @@ function renderPlateEvent() {
     <div class="muted">${[e.startText ? 'Starts ' + e.startText : '', e.location].filter(Boolean).map(esc).join(' · ')}</div>
     <div class="small muted" style="margin-top:6px">${e.plates} plate${e.plates === 1 ? '' : 's'} so far</div>
     ${plateChips(e.counts)}
+    ${e.dietKey ? `<div class="small muted" style="margin-top:6px">${esc(e.dietKey)}</div>` : ''}
     <div style="height:10px"></div>
     ${sharing}
     ${e.contactsHidden ? '<div class="callout">Email addresses are no longer shown for this event. The Secretary can help if you need to reach someone.</div>' : ''}
@@ -625,7 +660,10 @@ function renderPlateEvent() {
     ${e.past ? '' : '<button class="ghost big" style="margin-top:12px" onclick="editEvent()">Edit event</button>'}`;
 }
 async function savePlateEntry(ref) {
-  const d = { first: $('ed_first').value, last: $('ed_last').value, category: $('ed_category').value, item: $('ed_item').value, gf: $('ed_gf').checked, nf: $('ed_nf').checked, email: $('ed_email') ? $('ed_email').value : '' };
+  const e = S.ev, extras = {};
+  (e.questions || []).forEach((q, k) => { extras[q.title] = $('ed_q' + k).value; });
+  const d = { first: $('ed_first').value, last: $('ed_last').value, category: $('ed_category').value, item: $('ed_item').value,
+    diets: (e.diets || []).filter((x, k) => $('ed_diet' + k).checked), extras, email: $('ed_email') ? $('ed_email').value : '' };
   S.ev = await run('Saving…', 'cpPlateSave', S.ev.id, ref, d);
   S.editingPlate = null; renderEvent(); toast('Saved.');
 }
@@ -634,8 +672,9 @@ async function removePlate(ref) {
   S.removingPlate = null; renderEvent(); toast('Removed from the list.');
 }
 function plateTable() {
-  return [['Category', 'Item', 'Gluten free', 'Nut free', 'First name', 'Last name', 'Email', 'Added']]
-    .concat(sortedEntries().map(x => [x.category, x.item, x.gf ? 'Yes' : '', x.nf ? 'Yes' : '', x.first, x.last, x.email, x.added]));
+  const diets = dietCols(), qs = S.ev.answerTitles || [];
+  return [['Category', 'Item'].concat(diets, qs, ['First name', 'Last name', 'Email', 'Added'])]
+    .concat(sortedEntries().map(x => [x.category, x.item].concat(diets.map(d => (hasDiet(x, d) ? 'Yes' : '')), qs.map(q => answer(x, q)), [x.first, x.last, x.email, x.added])));
 }
 function copyPlates() { copy(plateTable().map(r => r.map(c => String(c).replace(/[\t\n]/g, ' ')).join('\t')).join('\n'), 'List'); }
 function downloadPlates() {
@@ -651,8 +690,8 @@ function printPlates() {
   const e = S.ev;
   const groups = e.categories.map(c => {
     const here = e.entries.filter(x => x.category === c).sort((a, b) => (a.last + a.first).localeCompare(b.last + b.first));
-    return `<h2>${esc(c)} (${here.length})</h2>` + (here.length
-      ? `<table><tr><th></th><th>Item</th><th>Notes</th><th>Brought by</th></tr>${here.map(x => `<tr><td class="tick"><span></span></td><td>${esc(x.item)}</td><td>${[x.gf ? 'Gluten free' : '', x.nf ? 'Nut free' : ''].filter(Boolean).join(', ')}</td><td>${esc(x.first)} ${esc(x.last)}</td></tr>`).join('')}</table>`
+    return `<h2>${catHead(c)} (${here.length})</h2>` + (here.length
+      ? `<table><tr><th></th><th>Item</th><th>Notes</th><th>Brought by</th></tr>${here.map(x => `<tr><td class="tick"><span></span></td><td>${esc(x.item)}</td><td>${esc(dietCols().filter(d => hasDiet(x, d)).join(', '))}${(x.extras || []).map(a => `<div>${esc(a.q)}: ${esc(a.a)}</div>`).join('')}</td><td>${esc(x.first)} ${esc(x.last)}</td></tr>`).join('')}</table>`
       : '<p>Nothing listed.</p>');
   }).join('');
   $('print').innerHTML = `<h1>${esc(e.name)}: bring a plate</h1><p>${[e.dateText, e.startText ? 'starts ' + e.startText : '', e.location].filter(Boolean).map(esc).join(' · ')} · ${e.plates} plate${e.plates === 1 ? '' : 's'}</p>${groups}`;

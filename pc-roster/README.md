@@ -6,7 +6,7 @@ A volunteer roster that runs from one Google Sheet. Event coordinators use a sim
 
 | | |
 |---|---|
-| **Bring a plate** | A second kind of event: families say what they'll bring. The form shows what's covered by category, with counts and GF/NF tags but never names. See *Bring a plate* below. |
+| **Bring a plate** | A second kind of event: families say what they'll bring. The form shows what's covered by category, with counts and diet tags (GF, NF…) but never names. Categories, diet tick boxes, notes and extra questions can be set per event. See *Bring a plate* below. |
 | **Coordinator page** | Each coordinator gets a personal link. From it they create events (three steps, or copy last year's), publish the sign-up form, copy a ready-made message for WhatsApp or the newsletter, see who's in each slot, add walk-ups, remove people, move people off the waitlist, and close sign-ups. They only see their own events. |
 | **Volunteer self-service** | Confirmations and reminders include a "Cancel or check my spot" link. Cancelling reopens the spot on the form and tells the coordinator straight away. |
 | **Coordinator updates** | One short email a day, only when something has changed (new sign-ups, cancellations). If spots are still open a few days before the event, the email includes a message ready to share. |
@@ -109,10 +109,16 @@ Group emails are addressed to the *Public email* (hello@wembleypc.org.au) with v
 For events where families bring food or drink rather than doing shifts.
 
 - **Creating one:** in **P&C Roster › New event…** choose *Kind of sign-up: Bring a plate*, or tap **+ New event › Bring a plate** on the coordinator page. Enter the name, date, start time and place. There are no slots.
-- **The form** asks for first and last name, a category (*Sweet, Savoury, Drinks, Other*), what they're bringing, *Gluten free / Nut free* ticks and an optional email. It's published, open to anyone with the link, and only the owner can edit it, like every other sign-up form.
-- **What's covered:** a Google Form can't show a live list, so its description is rewritten after every entry. It lists each category with a count (so "Savoury (0): nothing yet" stands out), each item and GF/NF tags. **Names and emails never appear.**
+- **Per-event settings** (New event window, the coordinator page's *Edit event*, or the Events tab columns *Plate categories*, *Diet options*, *Plate notes* and *Extra questions*):
+  - *Plate categories*: comma-separated, default `Sweet, Savoury, Drinks, Other`. Add a note after a colon, e.g. `Savoury: Rooms 23 & 24, Sweet or fruit: Rooms 15 & 25`. The note shows in the form's choice and in the "What's covered" list.
+  - *Diet options*: comma-separated tick boxes, default `Gluten free, Nut free` (`None` removes the question). The list shows short codes (GF, NF, V, VG, DF…) with a key line underneath.
+  - *Plate notes*: free text shown in the form description (above "What's covered") and in the confirmation and reminder emails (or wherever `{PlateNotes}` is placed in those templates).
+  - *Extra questions*: same format as timeslot events, e.g. `*Which room is your Year 5 child in? [15|23|24|25]`. Answers show on the coordinator page, the print view, Copy list, Download CSV and the Plates tab's *Extra answers* column.
+  - Saving on the coordinator page, or **Create / update sign-up form** after editing the Events tab, updates the existing form. Blank cells mean the defaults, so older events are unchanged.
+- **The form** asks for first and last name, a category, what they're bringing, the diet tick boxes, any extra questions and an optional email. It's published, open to anyone with the link, and only the owner can edit it, like every other sign-up form.
+- **What's covered:** a Google Form can't show a live list, so its description is rewritten after every entry. It lists each category with a count (so "Savoury (0): nothing yet" stands out), each item and its diet codes. **Names and emails never appear.**
 - **Duplicates** aren't blocked. Parents are asked to check the list first. If something similar is already listed, the confirmation email mentions it, and the coordinator's list marks it *Similar to…*.
-- **Coordinators** see the full list on their page (name, category, item, GF/NF, email), sorted by category, last name or newest. They can edit or remove an entry (the form's list updates straight away), **Print** a tick-list for the day, **Copy list** into a spreadsheet, or **Download CSV**. Emails disappear from their view after *Hide contact details after (days)*, as with timeslot events.
+- **Coordinators** see the full list on their page (name, category, item, diet, extra answers, email), sorted by category, last name or newest. They can edit or remove an entry (the form's list updates straight away), **Print** a tick-list for the day, **Copy list** into a spreadsheet, or **Download CSV**. Emails disappear from their view after *Hide contact details after (days)*, as with timeslot events.
 - **Emails** go only to people who gave an address: a confirmation, and a reminder *Plate reminder days before* (default the day before), using the *Reminder emails* setting. The coordinator's daily update lists new plates and flags empty categories close to the day.
 - **Data:** entries live on their own **Plates** tab, so they never affect timeslot hours, the Volunteers tab or Stats. Removed entries stay there marked *Removed*. If you change a row on the Plates tab by hand, run **Refresh** to update the form's list.
 

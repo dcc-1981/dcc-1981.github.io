@@ -31,7 +31,7 @@ const SH = {
 
 const HEADERS = {
   [SH.EVENTS]: ['Event ID', 'Event name', 'Type', 'Date', 'Location', 'Coordinator', 'Coordinator email',
-    'Status', 'Extra questions', 'Group emails', 'Format', 'Start time', 'Sign-up form link', 'Form edit link', 'Form ID', 'Thank-yous drafted', 'Notes'],
+    'Status', 'Extra questions', 'Group emails', 'Format', 'Start time', 'Plate categories', 'Diet options', 'Plate notes', 'Sign-up form link', 'Form edit link', 'Form ID', 'Thank-yous drafted', 'Notes'],
   [SH.SLOTS]: ['Event ID', 'Slot #', 'Date', 'Start', 'End', 'Role / task', 'Spots', 'Description', 'Filled', 'Remaining'],
   [SH.TEMPLATES]: ['Template', 'Day offset', 'Start', 'End', 'Role / task', 'Spots', 'Description', 'Extra questions'],
   [SH.SIGNUPS]: ['Timestamp', 'Event ID', 'Event name', 'Slot #', 'Role / task', 'Slot date', 'Start', 'End',
@@ -43,13 +43,15 @@ const HEADERS = {
   [SH.COORDS]: ['Name', 'Email', 'Active', 'Page link', 'Welcome email', 'Key'],
   // Bring-a-plate sign-ups: kept apart from Sign-ups so they never touch timeslot hours or stats.
   [SH.PLATES]: ['Timestamp', 'Event ID', 'Event name', 'First name', 'Last name', 'Category', 'Item',
-    'Gluten free', 'Nut free', 'Email', 'Status', 'Reminder', 'Ref'],
+    'Gluten free', 'Nut free', 'Email', 'Status', 'Reminder', 'Ref', 'Diet', 'Extra answers'],
 };
 
 // Event formats (Events tab "Format" column). Blank means timeslots, so older events need no change.
 const FORMAT_SLOTS = 'Timeslots';
 const FORMAT_PLATE = 'Bring a plate';
-const PLATE_CATEGORIES = ['Sweet', 'Savoury', 'Drinks', 'Other'];
+// Bring-a-plate defaults, used when an event's "Plate categories" / "Diet options" cell is blank.
+const PLATE_DEFAULT_CATEGORIES = 'Sweet, Savoury, Drinks, Other';
+const PLATE_DEFAULT_DIET = 'Gluten free, Nut free';
 const PLATE_STATUSES = ['Confirmed', 'Removed'];
 
 // Wembley PS P&C Brand Identity Guide v1.1 (Oct 2026). The guide wins if these ever differ.
@@ -386,7 +388,9 @@ function formatSheets_() {
 
   const pl = sheet_(SH.PLATES);
   setColumnFormat_(pl, 'Timestamp', 'd mmm yyyy h:mm am/pm');
-  setValidationList_(pl, 'Category', PLATE_CATEGORIES);
+  // Categories are set per event, so the Category column takes any text.
+  const plc = colIndex_(pl, 'Category');
+  if (plc > 0) pl.getRange(2, plc, pl.getMaxRows() - 1, 1).clearDataValidations();
   setValidationList_(pl, 'Gluten free', ['Yes', 'No']);
   setValidationList_(pl, 'Nut free', ['Yes', 'No']);
   setValidationList_(pl, 'Status', PLATE_STATUSES);
@@ -477,6 +481,7 @@ function getDialogData() {
     templates: templateNames_(),
     events: evs.map(e => ({ id: e.id, name: e.name, date: e.date ? dateKey_(e.date) : '', label: `${e.id} – ${e.name}${e.date ? ' (' + fmtDate_(e.date, 'd MMM yyyy') + ')' : ''}`, status: e.status })),
     adminEmail: s['Admin email'] || '',
+    plateDefaults: { categories: PLATE_DEFAULT_CATEGORIES, diets: PLATE_DEFAULT_DIET },
   };
 }
 
@@ -487,12 +492,15 @@ function createEventFromDialog(d) {
   const date = keyToDate_(d.date);
   const id = nextEventId_();
   if (d.kind === 'plate') {
+    ensureHeaders_(SH.EVENTS);
     const start = parseTime_(d.startTime);
     if (start == null) throw new Error('Add the start time.');
     appendObjects_(SH.EVENTS, [{
       'Event ID': id, 'Event name': d.name.trim(), 'Type': d.type, 'Date': date, 'Format': FORMAT_PLATE,
       'Start time': fmtTime_(start, 'sheet'), 'Location': (d.location || '').trim(), 'Coordinator': (d.coordinator || '').trim(),
       'Coordinator email': (d.coordinatorEmail || '').trim(), 'Status': 'Draft',
+      'Extra questions': clip_(d.extraQuestions, 1500), 'Plate categories': plateConfigText_(d.plateCategories, PLATE_DEFAULT_CATEGORIES),
+      'Diet options': plateConfigText_(d.dietOptions, PLATE_DEFAULT_DIET), 'Plate notes': clip_(d.plateNotes, 1000),
     }]);
     const url = d.createForm ? buildForm_(id).url : '';
     filterSheetByEvent_(SH.PLATES, id);
@@ -608,6 +616,11 @@ function events_() {
   return t.rows.map((r, i) => ({
     format: /^bring a plate$/i.test(String(r['Format'] || '').trim()) ? FORMAT_PLATE : FORMAT_SLOTS,
     startTime: parseTime_(t.disp[i]['Start time']),
+    plateCategories: plateCategories_(r['Plate categories']),
+    dietOptions: dietOptions_(r['Diet options']),
+    plateNotes: String(r['Plate notes'] || '').trim(),
+    plateCategoriesText: String(r['Plate categories'] || '').trim() || PLATE_DEFAULT_CATEGORIES,
+    dietOptionsText: r['Diet options'] === undefined || String(r['Diet options']).trim() === '' ? PLATE_DEFAULT_DIET : String(r['Diet options']).trim(),
     row: i,
     id: String(r['Event ID']).trim(),
     name: String(r['Event name']).trim(),
@@ -1785,21 +1798,65 @@ function menuCoordinatorLinks() {
   let msg = `${made} new link(s) made. Links are in the Page link column on the Coordinators tab.`;
   if (unsent.length && ui.alert('Coordinator links', `${msg}\n\nDraft a short welcome email (with their link) for the ${unsent.length} coordinator(s) who haven't had one?`, ui.ButtonSet.YES_NO) === ui.Button.YES) {
     const st = settings_();
-    unsent.forEach(i => {
-      const r = t.rows[i];
-      const first = String(r['Name']).trim().split(/\s+/)[0] || 'there';
-      GmailApp.createDraft(String(r['Email']).trim(), 'Your link for organising P&C volunteers',
-        `Hi ${first},\n\nHere's your link for organising volunteers for P&C events:\n${r['Page link']}\n\n` +
-        'Bookmark it – there\'s nothing to install and no log-in. From there you can set up an event (or copy last year\'s), share the sign-up link and see who\'s coming. ' +
-        'Volunteers get their confirmations and reminders automatically, and can cancel their own spot if their plans change.\n\n' +
-        'Please keep the link to yourself, as it shows volunteers\' contact details. Any questions, just reply.\n\n' +
-        `Thanks for helping,\n${st['Sender name'] || 'The P&C team'}`, clean_({ name: fromName_(st) }));
-      t.set(i, 'Welcome email', 'Drafted ' + fmtDate_(new Date(), 'd MMM'));
+    const people = unsent.map(i => ({ name: String(t.rows[i]['Name']).trim(), email: String(t.rows[i]['Email']).trim(), link: String(t.rows[i]['Page link']) }));
+    let drafted = 0;
+    const failed = [], notMarked = [];
+    people.forEach(p => {
+      const first = p.name.split(/\s+/)[0] || 'there';
+      try {
+        GmailApp.createDraft(p.email, 'Your link for organising P&C volunteers',
+          `Hi ${first},\n\nHere's your link for organising volunteers for P&C events:\n${p.link}\n\n` +
+          'Bookmark it – there\'s nothing to install and no log-in. From there you can set up an event (or copy last year\'s), share the sign-up link and see who\'s coming. ' +
+          'Volunteers get their confirmations and reminders automatically, and can cancel their own spot if their plans change.\n\n' +
+          'Please keep the link to yourself, as it shows volunteers\' contact details. Any questions, just reply.\n\n' +
+          `Thanks for helping,\n${st['Sender name'] || 'The P&C team'}`, clean_({ name: fromName_(st) }));
+      } catch (e) {
+        Logger.log(`Welcome draft for ${p.email} failed: ${e && e.message}`);
+        failed.push(p.name || p.email);
+        return;
+      }
+      drafted++;
+      // Write the cell straight away (found again by email, as rows can move while the dialog is open) and check it stuck.
+      if (!markWelcomeDrafted_(p.email, 'Drafted ' + fmtDate_(new Date(), 'd MMM'))) notMarked.push(p.name || p.email);
     });
-    alert_(`${unsent.length} welcome email(s) are in Gmail Drafts – check and send them.`);
+    alert_(`${drafted} welcome email(s) are in Gmail Drafts – check and send them.` +
+      (failed.length ? `\n\nCouldn't make a draft for: ${failed.join(', ')}. Run this again to retry.` : '') +
+      (notMarked.length ? `\n\nThe draft was made, but the Welcome email cell couldn't be filled in for: ${notMarked.join(', ')}. Type "Drafted" in their Welcome email cell on the Coordinators tab so they don't get a second one.` : ''));
   } else {
     alert_(msg);
   }
+}
+
+/**
+ * Writes the Welcome email cell for a coordinator, found by email on a fresh read of the Coordinators tab,
+ * then flushes and reads it back (one retry). Returns true once the cell holds the text.
+ */
+function markWelcomeDrafted_(email, text) {
+  const want = String(email || '').trim().toLowerCase();
+  if (!want) return false;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const sh = sheet_(SH.COORDS);
+      const lastCol = sh.getLastColumn();
+      const headers = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h).trim().toLowerCase());
+      const ec = headers.indexOf('email');
+      let wc = headers.indexOf('welcome email');
+      if (ec < 0) return false;
+      if (wc < 0) { wc = headers.filter(String).length; sh.getRange(1, wc + 1).setValue('Welcome email'); }
+      const n = sh.getLastRow() - 1;
+      if (n < 1) return false;
+      const rows = sh.getRange(2, ec + 1, n, 1).getValues()
+        .map((r, k) => (String(r[0]).trim().toLowerCase() === want ? k + 2 : 0)).filter(Boolean);
+      if (!rows.length) return false;
+      rows.forEach(row => sh.getRange(row, wc + 1).setValue(text));
+      SpreadsheetApp.flush();
+      if (rows.every(row => String(sh.getRange(row, wc + 1).getValue()).trim() === text)) return true;
+      Logger.log(`Welcome email cell for ${want} didn't stick (attempt ${attempt + 1})`);
+    } catch (e) {
+      Logger.log(`Welcome email cell for ${want} failed: ${e && e.message}`);
+    }
+  }
+  return false;
 }
 
 /* ---------- Coordinator page: data ---------- */
@@ -1816,7 +1873,7 @@ function eventCard_(ev, today) {
     const entries = plateRows_(ev.id).filter(x => x.status === 'Confirmed');
     return {
       id: ev.id, name: ev.name, dateText: ev.date ? fmtDate_(ev.date, 'EEE d MMM yyyy') : '', dateKey: dateKey_(ev.date),
-      status: ev.status, plate: true, plates: entries.length, counts: plateCounts_(entries),
+      status: ev.status, plate: true, plates: entries.length, counts: plateCounts_(entries, ev.plateCategories),
       past: !!ev.date && dateKey_(ev.date) < today,
     };
   }
@@ -1852,7 +1909,7 @@ function cpLoad(key) {
   const logo = logoBlob_(st);
   return {
     name: c.name, types: splitList_(st['Event types']), wwcTypes: splitList_(st['WWC required for types']),
-    events: mine, templates: templateNames_(), pastEvents: past, plateCategories: PLATE_CATEGORIES,
+    events: mine, templates: templateNames_(), pastEvents: past, plateDefaults: { categories: PLATE_DEFAULT_CATEGORIES, diets: PLATE_DEFAULT_DIET },
     logo: logo ? 'data:' + logo.getContentType() + ';base64,' + Utilities.base64Encode(logo.getBytes()) : '',
     pcName: st['P&C name'],
     timeChangeEmails: isYes_(st['Send time-change emails']),
@@ -2177,26 +2234,80 @@ function vmCancel(token, ref) {
  * details hidden after the usual number of days).
  */
 
-/** Plates rows for one event. */
-function plateRows_(eventId) {
-  const t = getTable_(SH.PLATES);
-  return t.rows.map((r, i) => ({
-    i, ref: String(r['Ref'] || ''), first: String(r['First name'] || ''), last: String(r['Last name'] || ''),
-    category: String(r['Category'] || 'Other'), item: String(r['Item'] || ''),
-    gf: isYes_(r['Gluten free']), nf: isYes_(r['Nut free']), email: String(r['Email'] || '').trim(),
-    status: String(r['Status'] || 'Confirmed') || 'Confirmed', reminder: String(r['Reminder'] || ''),
-    at: r['Timestamp'] instanceof Date ? r['Timestamp'] : null,
-  })).filter((x, i) => String(t.rows[i]['Event ID']).trim().toUpperCase() === String(eventId).toUpperCase());
+/* ---------- Per-event settings (Events tab: Plate categories, Diet options, Plate notes) ---------- */
+
+/** "Savoury: Rooms 23 & 24, Sweet or fruit: Rooms 15 & 25" → [{ name, hint, label }]. Blank → the default categories. */
+function plateCategories_(text) {
+  const raw = String(text == null ? '' : text).trim() || PLATE_DEFAULT_CATEGORIES;
+  const seen = {};
+  const out = [];
+  raw.split(/[,\n]/).map(x => x.trim()).filter(Boolean).forEach(x => {
+    const c = x.indexOf(':');
+    const name = clip_(c >= 0 ? x.slice(0, c) : x, 40);
+    const hint = c >= 0 ? clip_(x.slice(c + 1), 80) : '';
+    if (!name || seen[name.toLowerCase()]) return;
+    seen[name.toLowerCase()] = true;
+    out.push({ name, hint, label: hint ? `${name} – ${hint}` : name });
+  });
+  return out.length ? out.slice(0, 12) : plateCategories_(PLATE_DEFAULT_CATEGORIES);
 }
 
-function plateCounts_(entries) {
-  const c = {};
-  PLATE_CATEGORIES.forEach(k => { c[k] = 0; });
-  entries.forEach(x => { c[x.category] = (c[x.category] || 0) + 1; });
-  return c;
+/** "Gluten free, Vegetarian, Vegan" → tick-box options. Blank → the defaults; "None" → no diet question. */
+function dietOptions_(text) {
+  const raw = String(text == null ? '' : text).trim();
+  if (!raw) return splitList_(PLATE_DEFAULT_DIET);
+  if (/^(none|no|-)$/i.test(raw)) return [];
+  const seen = {};
+  const out = [];
+  raw.split(/[,\n]/).map(x => clip_(x, 40)).filter(Boolean).forEach(x => {
+    if (seen[x.toLowerCase()]) return;
+    seen[x.toLowerCase()] = true;
+    out.push(x);
+  });
+  return out.slice(0, 10);
 }
 
-function plateTags_(x) { return [x.gf ? 'gluten free' : '', x.nf ? 'nut free' : ''].filter(String); }
+/** Tidies a categories / diet options entry for the Events tab (one line, comma-separated). */
+function plateConfigText_(text, def) {
+  const t = String(text == null ? '' : text).split(/[,\n]/).map(x => x.trim()).filter(Boolean).join(', ');
+  return clip_(t, 600) || def;
+}
+
+const DIET_CODES = {
+  'gluten free': 'GF', 'nut free': 'NF', 'vegetarian': 'V', 'vegan': 'VG', 'dairy free': 'DF', 'egg free': 'EF',
+  'lactose free': 'LF', 'halal': 'H', 'kosher': 'K', 'contains nuts': 'CN',
+};
+
+/** Short codes for diet options (GF, NF, V, VG…), unique within the list. Unknown options use their initials. */
+function dietCodes_(options) {
+  const used = {};
+  const out = {};
+  options.forEach(o => {
+    const base = DIET_CODES[o.toLowerCase()] || o.split(/[\s-]+/).filter(Boolean).map(w => w.charAt(0)).join('').toUpperCase().slice(0, 3) || '?';
+    let code = base, n = 2;
+    while (used[code]) code = base + n++;
+    used[code] = true;
+    out[o] = code;
+  });
+  return out;
+}
+
+/** "GF = gluten free · NF = nut free" */
+function dietKeyLine_(options) {
+  const c = dietCodes_(options);
+  return options.map(o => `${c[o]} = ${o.toLowerCase()}`).join(' · ');
+}
+
+/** Maps a form answer (label "Savoury – Rooms 23 & 24", or just "Savoury") back to its category name, or '' if none. */
+function matchPlateCategory_(cats, answer) {
+  const a = String(answer || '').trim();
+  const lo = a.toLowerCase();
+  if (!a) return '';
+  const hit = cats.filter(c => c.label === a)[0] ||
+    cats.filter(c => c.name.toLowerCase() === lo || c.label.toLowerCase() === lo)[0] ||
+    cats.slice().sort((x, y) => y.name.length - x.name.length).filter(c => lo.indexOf(c.name.toLowerCase() + ' –') === 0)[0];
+  return hit ? hit.name : '';
+}
 
 // Questions on a bring-a-plate form. Changing these after forms exist breaks matching.
 const PQ = {
@@ -2207,11 +2318,87 @@ const PQ = {
   DIET: 'Is it… (tick any that apply)',
   EMAIL: 'Email (optional)',
 };
-const PLATE_DIET = ['Gluten free', 'Nut free'];
+const PLATE_TITLES = Object.keys(PQ).map(k => PQ[k]);
+
+/** The event's extra questions for its bring-a-plate form. */
+function plateExtras_(ev) { return parseExtraQuestions_(ev.extra, PLATE_TITLES); }
+
+/** "Question: answer" lines (Plates tab "Extra answers") → [{ q, a }]. Known question titles are matched first. */
+function parseExtraAnswers_(v, titles) {
+  return String(v || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+    const t = (titles || []).filter(x => l.indexOf(x + ': ') === 0)[0];
+    if (t) return { q: t, a: l.slice(t.length + 2) };
+    const k = l.indexOf(': ');
+    return k > 0 ? { q: l.slice(0, k), a: l.slice(k + 2) } : { q: '', a: l };
+  });
+}
+
+/** An entry's diet options: the Diet column, or (older rows) the Gluten free / Nut free columns. */
+function rowDiets_(r) {
+  const d = String(r['Diet'] || '').trim();
+  if (d) return d.split(',').map(x => x.trim()).filter(Boolean);
+  return (isYes_(r['Gluten free']) ? ['Gluten free'] : []).concat(isYes_(r['Nut free']) ? ['Nut free'] : []);
+}
+
+/** Plates-tab columns for a cleaned entry. Gluten free / Nut free are still filled in for older reports. */
+function plateRowFields_(entry) {
+  const has = n => entry.diets.some(x => x.toLowerCase() === n);
+  return {
+    'First name': entry.first, 'Last name': entry.last, 'Category': entry.category, 'Item': entry.item,
+    'Gluten free': has('gluten free') ? 'Yes' : 'No', 'Nut free': has('nut free') ? 'Yes' : 'No', 'Email': entry.email,
+    'Diet': entry.diets.join(', '), 'Extra answers': entry.extras.map(x => `${x.q}: ${x.a}`).join('\n'),
+  };
+}
+
+/** Adds any missing columns to a tab (as Setup / repair does), so new columns work before Setup is re-run. */
+function ensureHeaders_(name) {
+  const sh = sheet_(name);
+  const existing = sh.getLastColumn() ? sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String) : [];
+  const missing = HEADERS[name].filter(h => existing.indexOf(h) < 0);
+  if (!missing.length || !existing.filter(String).length) return;
+  sh.getRange(1, existing.filter(String).length + 1, 1, missing.length).setValues([missing]);
+}
+
+/** Plates rows for one event. */
+function plateRows_(eventId, titles) {
+  const t = getTable_(SH.PLATES);
+  return t.rows.map((r, i) => {
+    const diets = rowDiets_(r);
+    return {
+      i, ref: String(r['Ref'] || ''), first: String(r['First name'] || ''), last: String(r['Last name'] || ''),
+      category: String(r['Category'] || 'Other'), item: String(r['Item'] || ''), diets,
+      gf: diets.some(x => /^gluten free$/i.test(x)), nf: diets.some(x => /^nut free$/i.test(x)),
+      extras: parseExtraAnswers_(r['Extra answers'], titles), email: String(r['Email'] || '').trim(),
+      status: String(r['Status'] || 'Confirmed') || 'Confirmed', reminder: String(r['Reminder'] || ''),
+      at: r['Timestamp'] instanceof Date ? r['Timestamp'] : null,
+    };
+  }).filter((x, i) => String(t.rows[i]['Event ID']).trim().toUpperCase() === String(eventId).toUpperCase());
+}
+
+/** Category → count, starting with the event's own categories (in order) at 0. */
+function plateCounts_(entries, cats) {
+  const c = {};
+  (cats || plateCategories_('')).forEach(k => { c[k.name] = 0; });
+  entries.forEach(x => { c[x.category] = (c[x.category] || 0) + 1; });
+  return c;
+}
+
+/** The event's categories, plus any category an entry still uses after it was taken off the list. */
+function plateCategoriesInUse_(ev, entries) {
+  const cats = ev.plateCategories.slice();
+  entries.forEach(x => { if (!cats.some(c => c.name === x.category)) cats.push({ name: x.category, hint: '', label: x.category }); });
+  return cats;
+}
+
+function plateTags_(x) { return x.diets.map(d => d.toLowerCase()); }
+
+/** Diet codes for one entry, e.g. ['GF', 'V']. */
+function plateCodes_(x, codes) { return x.diets.map(d => codes[d] || dietCodes_([d])[d]); }
 
 /** Creates or updates the bring-a-plate Google Form for an event. Same publishing, sharing and response handling as timeslot forms. */
 function buildPlateForm_(ev) {
   const st = settings_();
+  ensureHeaders_(SH.PLATES);
   let form = null;
   if (ev.formId) { try { form = FormApp.openById(ev.formId); } catch (e) { form = null; } }
   const created = !form;
@@ -2228,15 +2415,38 @@ function buildPlateForm_(ev) {
   ensureItem_(form, PQ.FIRST, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(true);
   ensureItem_(form, PQ.LAST, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(true);
   ensureItem_(form, PQ.CATEGORY, FormApp.ItemType.MULTIPLE_CHOICE, () => form.addMultipleChoiceItem()).asMultipleChoiceItem()
-    .setChoiceValues(PLATE_CATEGORIES).setRequired(true);
+    .setChoiceValues(ev.plateCategories.map(c => c.label)).setRequired(true);
   ensureItem_(form, PQ.ITEM, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(true)
     .setHelpText('This appears in the list at the top, without your name. Please check it first so we get a good mix.');
-  ensureItem_(form, PQ.DIET, FormApp.ItemType.CHECKBOX, () => form.addCheckboxItem()).asCheckboxItem()
-    .setChoiceValues(PLATE_DIET).setRequired(false);
+  if (ev.dietOptions.length) {
+    ensureItem_(form, PQ.DIET, FormApp.ItemType.CHECKBOX, () => form.addCheckboxItem()).asCheckboxItem()
+      .setChoiceValues(ev.dietOptions).setRequired(false);
+  } else {
+    const it = findItem_(form, PQ.DIET);
+    if (it) form.deleteItem(it);
+  }
+
+  // Event-specific extra questions (Events tab "Extra questions"). Only remove ones this script added before.
+  const props = PropertiesService.getDocumentProperties();
+  const key = 'extra_' + form.getId();
+  const previous = JSON.parse(props.getProperty(key) || '[]');
+  const extras = plateExtras_(ev);
+  const extraTitles = extras.map(x => x.title);
+  previous.filter(t => extraTitles.indexOf(t) < 0).forEach(t => { const it = findItem_(form, t); if (it) form.deleteItem(it); });
+  extras.forEach(x => {
+    if (x.options) {
+      ensureItem_(form, x.title, FormApp.ItemType.MULTIPLE_CHOICE, () => form.addMultipleChoiceItem())
+        .asMultipleChoiceItem().setChoiceValues(x.options).setRequired(x.required);
+    } else {
+      ensureItem_(form, x.title, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(x.required);
+    }
+  });
+  props.setProperty(key, JSON.stringify(extraTitles));
+
   ensureItem_(form, PQ.EMAIL, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(false)
     .setHelpText('Only used to send you a confirmation and a reminder the day before.')
     .setValidation(FormApp.createTextValidation().requireTextIsEmail().setHelpText('Please enter a valid email address, or leave it blank.').build());
-  [PQ.FIRST, PQ.LAST, PQ.CATEGORY, PQ.ITEM, PQ.DIET, PQ.EMAIL].forEach((t, i) => {
+  [PQ.FIRST, PQ.LAST, PQ.CATEGORY, PQ.ITEM].concat(ev.dietOptions.length ? [PQ.DIET] : []).concat(extraTitles).concat([PQ.EMAIL]).forEach((t, i) => {
     const it = findItem_(form, t);
     if (it && it.getIndex() !== i) form.moveItem(it.getIndex(), i);
   });
@@ -2255,7 +2465,7 @@ function buildPlateForm_(ev) {
 
 /**
  * A Google Form can't show a live list, so the form's description is rewritten whenever the list changes:
- * event details, then what's covered by category (counts, items, GF/NF), never names or emails.
+ * event details, the organisers' notes, then what's covered by category (counts, items, diet codes), never names or emails.
  * Also opens or closes the form to match the event.
  */
 function refreshPlateForm_(ev, form) {
@@ -2272,25 +2482,28 @@ function refreshPlateForm_(ev, form) {
   }
 }
 
-/** The form description: who/when/where, what's covered so far, privacy note and footer. Kept well under Google's length limit. */
+/** The form description: who/when/where, notes, what's covered so far, privacy note and footer. Kept well under Google's length limit. */
 function plateDescription_(ev, st) {
   const live = plateRows_(ev.id).filter(x => x.status === 'Confirmed');
   const when = [ev.date ? fmtDate_(ev.date, 'EEEE d MMMM yyyy') : '', ev.startTime == null ? '' : fmtTime_(ev.startTime), ev.location].filter(String).join(' · ');
   const lines = [`Can you bring a plate to share? Add what you're bringing below, so we get a good mix.`, '', when];
   if (ev.coordinator || ev.coordinatorEmail) lines.push(`Questions? ${[ev.coordinator, ev.coordinatorEmail].filter(String).join(' – ')}`);
+  if (ev.plateNotes) lines.push('', ev.plateNotes);
   lines.push('', `WHAT'S COVERED SO FAR (${live.length})`);
+  const codes = dietCodes_(ev.dietOptions);
   const perCat = Math.max(8, Math.floor(1800 / Math.max(live.length, 1) * 4));
-  PLATE_CATEGORIES.forEach(k => {
-    const here = live.filter(x => x.category === k);
-    if (!here.length) { lines.push(`${k} (0): nothing yet`); return; }
+  plateCategoriesInUse_(ev, live).forEach(c => {
+    const head = c.hint ? `${c.name} – ${c.hint}` : c.name;
+    const here = live.filter(x => x.category === c.name);
+    if (!here.length) { lines.push(`${head} (0): nothing yet`); return; }
     const shown = here.slice(0, Math.min(perCat, 40)).map(x => {
-      const t = [x.gf ? 'GF' : '', x.nf ? 'NF' : ''].filter(String);
+      const t = plateCodes_(x, codes);
       return x.item + (t.length ? ` (${t.join(', ')})` : '');
     });
     const more = here.length - shown.length;
-    lines.push(`${k} (${here.length}): ${shown.join(', ')}${more > 0 ? `, and ${more} more` : ''}`);
+    lines.push(`${head} (${here.length}): ${shown.join(', ')}${more > 0 ? `, and ${more} more` : ''}`);
   });
-  lines.push('GF = gluten free · NF = nut free');
+  if (ev.dietOptions.length) lines.push(dietKeyLine_(ev.dietOptions));
   if (st['Plate privacy note']) lines.push('', st['Plate privacy note']);
   lines.push('', '———', footerLine_(st));
   let text = lines.join('\n');
@@ -2301,24 +2514,26 @@ function plateDescription_(ev, st) {
 /** One bring-a-plate form response: save it, refresh the list on the form, confirm by email. onRosterFormSubmit holds the lock. */
 function processPlateSubmit_(ev, ans, timestamp) {
   const st = settings_();
-  const diet = String(ans[PQ.DIET] || '');
+  const extras = {};
+  plateExtras_(ev).forEach(x => { extras[x.title] = ans[x.title]; });
+  // If the categories changed while someone had the form open, keep what they chose rather than lose the entry.
+  const category = matchPlateCategory_(ev.plateCategories, ans[PQ.CATEGORY]) || clip_(String(ans[PQ.CATEGORY] || '').split(' – ')[0], 40);
   let entry;
   try {
     entry = cleanPlateEntry_({
-      first: ans[PQ.FIRST], last: ans[PQ.LAST], category: ans[PQ.CATEGORY], item: ans[PQ.ITEM],
-      gf: /gluten/i.test(diet), nf: /nut/i.test(diet), email: ans[PQ.EMAIL],
-    });
+      first: ans[PQ.FIRST], last: ans[PQ.LAST], category, item: ans[PQ.ITEM],
+      diets: String(ans[PQ.DIET] || '').split(','), extras, email: ans[PQ.EMAIL],
+    }, ev, category);
   } catch (e) {
     Logger.log(`Bring-a-plate response for ${ev.id} skipped: ${e && e.message}`);
     return null;
   }
   const existing = plateRows_(ev.id).filter(x => x.status === 'Confirmed');
   const similar = similarItems_(entry.item, existing.map(x => x.item));
-  appendObjects_(SH.PLATES, [{
-    'Timestamp': validTimestamp_(timestamp), 'Event ID': ev.id, 'Event name': ev.name, 'First name': entry.first, 'Last name': entry.last,
-    'Category': entry.category, 'Item': entry.item, 'Gluten free': entry.gf ? 'Yes' : 'No', 'Nut free': entry.nf ? 'Yes' : 'No',
-    'Email': entry.email, 'Status': 'Confirmed', 'Ref': newRef_(),
-  }]);
+  ensureHeaders_(SH.PLATES);
+  appendObjects_(SH.PLATES, [Object.assign({
+    'Timestamp': validTimestamp_(timestamp), 'Event ID': ev.id, 'Event name': ev.name, 'Status': 'Confirmed', 'Ref': newRef_(),
+  }, plateRowFields_(entry))]);
   refreshPlateForm_(getEvent_(ev.id));
   let emailed = false;
   if (entry.email && isYes_(st['Send sign-up confirmations'])) {
@@ -2333,15 +2548,28 @@ function processPlateSubmit_(ev, ans, timestamp) {
   return { entry, similar, emailed };
 }
 
-/** Checks and tidies one entry from the form or the coordinator page. */
-function cleanPlateEntry_(d) {
+/**
+ * Checks and tidies one entry from the form or the coordinator page against the event's own categories,
+ * diet options and extra questions. keepCategory also allows a category no longer on the event's list.
+ */
+function cleanPlateEntry_(d, ev, keepCategory) {
   d = d || {};
+  const given = String(d.category || '').trim();
+  const category = matchPlateCategory_(ev.plateCategories, given) || (keepCategory && given === keepCategory ? keepCategory : '');
+  const want = (Array.isArray(d.diets) ? d.diets : String(d.diets || '').split(',')).map(x => String(x).trim().toLowerCase()).filter(Boolean);
+  if (d.gf && d.gf !== 'No') want.push('gluten free');
+  if (d.nf && d.nf !== 'No') want.push('nut free');
+  const answers = d.extras || {};
   const e = {
-    first: clip_(d.first, 60), last: clip_(d.last, 60), category: String(d.category || '').trim(),
-    item: clip_(d.item, 120), gf: !!d.gf && d.gf !== 'No', nf: !!d.nf && d.nf !== 'No', email: clip_(d.email, 254).toLowerCase(),
+    first: clip_(d.first, 60), last: clip_(d.last, 60), category,
+    item: clip_(d.item, 120), diets: ev.dietOptions.filter(o => want.indexOf(o.toLowerCase()) >= 0),
+    extras: plateExtras_(ev).map(x => ({ q: x.title, a: clip_(String(answers[x.title] == null ? '' : answers[x.title]).replace(/\s*\n\s*/g, ' '), 200) })).filter(x => x.a),
+    email: clip_(d.email, 254).toLowerCase(),
   };
+  e.gf = e.diets.some(x => /^gluten free$/i.test(x));
+  e.nf = e.diets.some(x => /^nut free$/i.test(x));
   if (!e.first || !e.last) throw new Error('Please add your first and last name.');
-  if (PLATE_CATEGORIES.indexOf(e.category) < 0) throw new Error('Please choose a category.');
+  if (!e.category) throw new Error('Please choose a category.');
   if (!e.item) throw new Error('Please say what you\'re bringing.');
   if (e.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.email)) throw new Error('That email address doesn\'t look right.');
   return e;
@@ -2355,7 +2583,17 @@ function plateVars_(ev, st, first) {
     FormLink: ev.formUrl || '', Coordinator: ev.coordinator || '', CoordinatorEmail: ev.coordinatorEmail || '',
     SenderName: ev.coordinator || st['Sender name'] || 'The P&C team', PCName: st['P&C name'] || '',
     ManageLine: 'If your plans change, just reply to this email and we\'ll sort it out.', DupNote: '',
+    PlateNotes: ev.plateNotes ? ev.plateNotes + '\n\n' : '',
   };
+}
+
+/** Puts {PlateNotes} after the plate list in a template that doesn't place it itself. Unchanged when the event has no notes. */
+function withPlateNotes_(tpl, ev) {
+  tpl = String(tpl || '');
+  if (!ev.plateNotes || tpl.indexOf('{PlateNotes}') >= 0) return tpl;
+  if (tpl.indexOf('{Shifts}\n\n') >= 0) return tpl.replace('{Shifts}\n\n', '{Shifts}\n\n{PlateNotes}');
+  if (tpl.indexOf('{Shifts}') >= 0) return tpl.replace('{Shifts}', '{Shifts}\n\n{PlateNotes}');
+  return tpl + '\n\n{PlateNotes}';
 }
 
 /** One person's plate(s) as a branded (or plain) email, using the same builder as the roster's other emails. */
@@ -2373,7 +2611,7 @@ function plateEmail_(ev, st, entry, kicker, subjectTpl, bodyTpl, similar) {
   vars.DupNote = similar && similar.length
     ? `Just so you know, the list already has ${similar.map(x => '“' + x + '”').join(', ')}. That's completely fine, or reply if you'd like to switch to something else.\n\n`
     : '';
-  return composeEmail_(kicker, subjectTpl, bodyTpl, vars, shifts, ev, st);
+  return composeEmail_(kicker, subjectTpl, withPlateNotes_(bodyTpl, ev), vars, shifts, ev, st);
 }
 
 /** Reminders for bring-a-plate events (by default the day before). Returns how many went out. */
@@ -2391,7 +2629,7 @@ function plateReminders_(st, mode, today) {
     if (!ev || String(r['Status'] || 'Confirmed') !== 'Confirmed' || String(r['Reminder']).trim() || !String(r['Email']).trim()) return;
     const k = ev.id + '|' + String(r['Email']).trim().toLowerCase();
     (people[k] = people[k] || { ev, email: String(r['Email']).trim(), rows: [], entries: [] }).rows.push(i);
-    people[k].entries.push({ first: String(r['First name']), category: String(r['Category']), item: String(r['Item']), gf: isYes_(r['Gluten free']), nf: isYes_(r['Nut free']) });
+    people[k].entries.push({ first: String(r['First name']), category: String(r['Category']), item: String(r['Item']), diets: rowDiets_(r) });
   });
   let n = 0;
   Object.keys(people).forEach(k => {
@@ -2416,13 +2654,14 @@ function plateUpdateLines_(ev, st, today, since, nudgeDays) {
   const entries = plateRows_(ev.id);
   const live = entries.filter(x => x.status === 'Confirmed');
   const fresh = live.filter(x => x.at && x.at >= since);
-  const counts = plateCounts_(live);
-  const gaps = PLATE_CATEGORIES.filter(k => !counts[k]);
+  const counts = plateCounts_(live, ev.plateCategories);
+  const names = plateCategoriesInUse_(ev, live).map(c => c.name);
+  const gaps = ev.plateCategories.map(c => c.name).filter(k => !counts[k]);
   const nudge = gaps.length && daysBetween_(today, dateKey_(ev.date)) === nudgeDays;
   if (!fresh.length && !nudge) return '';
   const lines = [`${ev.name} – ${fmtDate_(ev.date, 'EEE d MMM')} (bring a plate)`];
   if (fresh.length) lines.push('New: ' + fresh.map(x => `${x.first} ${x.last} – ${x.item} (${x.category})`).join('; '));
-  lines.push('So far: ' + PLATE_CATEGORIES.map(k => `${k} ${counts[k]}`).join(' · '));
+  lines.push('So far: ' + names.map(k => `${k} ${counts[k]}`).join(' · '));
   if (nudge) lines.push(`\nNothing yet for ${gaps.join(', ')}. Here's a message you can paste into WhatsApp or the newsletter:\n\n${shareText_(ev, st)}`);
   return lines.join('\n');
 }
@@ -2433,16 +2672,27 @@ function plateDetail_(ev) {
   const today = todayKey_();
   const hideAfter = Number(st['Hide contact details after (days)']);
   const hideContacts = !!ev.date && !isNaN(hideAfter) && String(st['Hide contact details after (days)']).trim() !== '' && daysBetween_(dateKey_(ev.date), today) > hideAfter;
-  const live = plateRows_(ev.id).filter(x => x.status === 'Confirmed');
+  const questions = plateExtras_(ev);
+  const titles = questions.map(x => x.title);
+  const live = plateRows_(ev.id, titles).filter(x => x.status === 'Confirmed');
+  const cats = plateCategoriesInUse_(ev, live);
+  const codes = dietCodes_(ev.dietOptions);
+  // Answers to questions taken off the event since still show, after the current ones.
+  live.forEach(x => x.extras.forEach(a => { if (a.q && titles.indexOf(a.q) < 0) titles.push(a.q); }));
   return {
     id: ev.id, plate: true, name: ev.name, type: ev.type, date: dateKey_(ev.date), dateText: ev.date ? fmtDate_(ev.date, 'EEE d MMM yyyy') : '',
     startTime: hhmm_(ev.startTime), startText: ev.startTime == null ? '' : fmtTime_(ev.startTime), location: ev.location,
     coordinator: ev.coordinator, status: ev.status, formUrl: ev.formUrl, share: shareText_(ev, st),
     past: !!ev.date && dateKey_(ev.date) < today, contactsHidden: hideContacts,
-    counts: plateCounts_(live), plates: live.length, categories: PLATE_CATEGORIES,
+    counts: plateCounts_(live, ev.plateCategories), plates: live.length,
+    categories: cats.map(c => c.name), categoryInfo: cats,
+    plateCategories: ev.plateCategoriesText, dietOptions: ev.dietOptionsText, plateNotes: ev.plateNotes, extra: ev.extra,
+    diets: ev.dietOptions, dietCodes: codes, dietKey: dietKeyLine_(ev.dietOptions),
+    questions: questions.map(x => ({ title: x.title, options: x.options || null, required: x.required })), answerTitles: titles,
     entries: live.map((x, i) => ({
       similarTo: similarItems_(x.item, live.slice(0, i).map(y => y.item))[0] || '',
       ref: x.ref, first: x.first, last: x.last, category: x.category, item: x.item, gf: x.gf, nf: x.nf,
+      diets: x.diets, codes: plateCodes_(x, codes), extras: x.extras.filter(a => a.q),
       email: hideContacts ? '' : x.email, added: x.at ? fmtDate_(x.at, 'd MMM h:mm a') : '', addedAt: x.at ? x.at.getTime() : 0,
     })),
   };
@@ -2450,27 +2700,31 @@ function plateDetail_(ev) {
 
 /** Create or update a bring-a-plate event from the coordinator page. cpSaveEvent already holds the lock. */
 function savePlateEvent_(c, d, existingEv, name) {
-  {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.date || ''))) throw new Error('Choose the event date.');
-    const start = parseTime_(d.startTime);
-    if (start == null) throw new Error('Add the start time.');
-    const st = settings_();
-    const type = splitList_(st['Event types']).indexOf(d.type) >= 0 ? d.type : (splitList_(st['Event types'])[0] || 'Event');
-    const fields = {
-      'Event name': name, 'Type': type, 'Date': keyToDate_(d.date), 'Start time': fmtTime_(start, 'sheet'),
-      'Location': clip_(d.location, 120), 'Format': FORMAT_PLATE,
-    };
-    let id;
-    if (existingEv) {
-      id = existingEv.id;
-      updateEvent_(id, fields);
-    } else {
-      id = nextEventId_();
-      appendObjects_(SH.EVENTS, [Object.assign({ 'Event ID': id, 'Coordinator': c.name, 'Coordinator email': c.email, 'Status': 'Draft' }, fields)]);
-    }
-    buildForm_(id);
-    return plateDetail_(getEvent_(id));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.date || ''))) throw new Error('Choose the event date.');
+  const start = parseTime_(d.startTime);
+  if (start == null) throw new Error('Add the start time.');
+  const st = settings_();
+  const type = splitList_(st['Event types']).indexOf(d.type) >= 0 ? d.type : (splitList_(st['Event types'])[0] || 'Event');
+  ensureHeaders_(SH.EVENTS);
+  const fields = {
+    'Event name': name, 'Type': type, 'Date': keyToDate_(d.date), 'Start time': fmtTime_(start, 'sheet'),
+    'Location': clip_(d.location, 120), 'Format': FORMAT_PLATE,
+  };
+  // Older pages don't send these: leave the event's settings as they are.
+  if (d.plateCategories !== undefined) fields['Plate categories'] = plateConfigText_(d.plateCategories, PLATE_DEFAULT_CATEGORIES);
+  if (d.dietOptions !== undefined) fields['Diet options'] = plateConfigText_(d.dietOptions, PLATE_DEFAULT_DIET);
+  if (d.plateNotes !== undefined) fields['Plate notes'] = clip_(d.plateNotes, 1000);
+  if (d.extra !== undefined) fields['Extra questions'] = clip_(d.extra, 1500);
+  let id;
+  if (existingEv) {
+    id = existingEv.id;
+    updateEvent_(id, fields);
+  } else {
+    id = nextEventId_();
+    appendObjects_(SH.EVENTS, [Object.assign({ 'Event ID': id, 'Coordinator': c.name, 'Coordinator email': c.email, 'Status': 'Draft' }, fields)]);
   }
+  buildForm_(id);
+  return plateDetail_(getEvent_(id));
 }
 
 /** Coordinator edits one entry. */
@@ -2478,19 +2732,22 @@ function cpPlateSave(key, id, ref, d) {
   const c = auth_(key);
   const ev = ownEvent_(c, id);
   if (!isPlate_(ev)) throw new Error('This isn\'t a bring-a-plate event.');
-  const entry = cleanPlateEntry_(d);
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
+    ensureHeaders_(SH.PLATES);
     const t = getTable_(SH.PLATES);
     const i = t.rows.findIndex(r => String(r['Ref']) === String(ref) && String(r['Event ID']).toUpperCase() === ev.id.toUpperCase());
     if (i < 0) throw new Error('Can\'t find that entry.');
+    const r = t.rows[i];
+    const entry = cleanPlateEntry_(d, ev, String(r['Category'] || ''));
+    // Keep diet ticks and answers for options or questions since taken off the event.
+    rowDiets_(r).forEach(x => { if (!ev.dietOptions.some(o => o.toLowerCase() === x.toLowerCase())) entry.diets.push(x); });
+    const titles = plateExtras_(ev).map(x => x.title);
+    parseExtraAnswers_(r['Extra answers'], titles).forEach(a => { if (titles.indexOf(a.q) < 0) entry.extras.push(a); });
     // An email hidden from the coordinator after the event comes back blank: keep the stored one.
-    if (!entry.email && plateDetail_(ev).contactsHidden) entry.email = String(t.rows[i]['Email'] || '');
-    t_setMany_(t, i, {
-      'First name': entry.first, 'Last name': entry.last, 'Category': entry.category, 'Item': entry.item,
-      'Gluten free': entry.gf ? 'Yes' : 'No', 'Nut free': entry.nf ? 'Yes' : 'No', 'Email': entry.email,
-    });
+    if (!entry.email && plateDetail_(ev).contactsHidden) entry.email = String(r['Email'] || '');
+    t_setMany_(t, i, plateRowFields_(entry));
     refreshPlateForm_(getEvent_(id));
   } finally {
     lock.releaseLock();
@@ -2831,7 +3088,8 @@ function fmtHours_(h) {
 }
 
 /** "Can you bring a plate? [Yes|No]; *T-shirt size" → question specs. */
-function parseExtraQuestions_(text) {
+function parseExtraQuestions_(text, exclude) {
+  exclude = exclude || STANDARD_TITLES;
   return String(text || '').split(/\n|;/).map(s => s.trim()).filter(Boolean).map(q => {
     let required = false;
     if (q.charAt(0) === '*') { required = true; q = q.slice(1).trim(); }
@@ -2843,7 +3101,7 @@ function parseExtraQuestions_(text) {
       if (!options.length) options = null;
     }
     return { title: q, required, options };
-  }).filter(x => x.title && STANDARD_TITLES.indexOf(x.title) < 0);
+  }).filter(x => x.title && exclude.indexOf(x.title) < 0);
 }
 
 /** Pulls "(#3)" slot references out of a checkbox answer. */
