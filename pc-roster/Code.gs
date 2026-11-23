@@ -2456,7 +2456,7 @@ function buildPlateForm_(ev) {
   }
   ensureItem_(form, PQ.EMAIL, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(true)
     .setHelpText('We\'ll send you a confirmation and a reminder the day before. Only the event coordinator and the P&C executive see it.')
-    .setValidation(FormApp.createTextValidation().requireTextIsEmail().setHelpText('Please enter a valid email address, or leave it blank.').build());
+    .setValidation(FormApp.createTextValidation().requireTextIsEmail().setHelpText('Please enter a valid email address.').build());
   [PQ.FIRST, PQ.LAST, PQ.CATEGORY, PQ.ITEM].concat(ev.dietOptions.length ? [PQ.DIET] : []).concat(extraTitles).concat([PQ.EMAIL]).forEach((t, i) => {
     const it = findItem_(form, t);
     if (it && it.getIndex() !== i) form.moveItem(it.getIndex(), i);
