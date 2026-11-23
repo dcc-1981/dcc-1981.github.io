@@ -603,7 +603,7 @@ function plateEntry(x) {
       ${(e.questions || []).map((q, k) => `<label>${esc(q.title)}</label>${q.options
         ? `<select id="ed_q${k}"><option value=""></option>${q.options.map(o => `<option ${o === answer(x, q.title) ? 'selected' : ''}>${esc(o)}</option>`).join('')}${answer(x, q.title) && q.options.indexOf(answer(x, q.title)) < 0 ? `<option selected>${esc(answer(x, q.title))}</option>` : ''}</select>`
         : `<input id="ed_q${k}" value="${esc(answer(x, q.title))}">`}`).join('')}
-      ${e.contactsHidden ? '' : `<label>Email <span class="muted small">(optional)</span></label><input id="ed_email" inputmode="email" value="${esc(x.email)}">`}
+      ${e.contactsHidden ? '' : `<label>Email</label><input id="ed_email" inputmode="email" value="${esc(x.email)}">`}
       <div class="row" style="margin-top:12px"><button onclick="savePlateEntry('${esc(x.ref)}')">Save</button><button class="ghost" onclick="S.editingPlate=null;renderEvent()">Cancel</button></div>
     </div>`;
   }

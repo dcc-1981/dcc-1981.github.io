@@ -2316,9 +2316,14 @@ const PQ = {
   CATEGORY: 'Category',
   ITEM: 'What are you bringing?',
   DIET: 'Is it… (tick any that apply)',
-  EMAIL: 'Email (optional)',
+  EMAIL: 'Email',
 };
-const PLATE_TITLES = Object.keys(PQ).map(k => PQ[k]);
+// Forms made before the email question was required used this title; older response tabs still have it.
+const PQ_EMAIL_OLD = 'Email (optional)';
+const PLATE_TITLES = Object.keys(PQ).map(k => PQ[k]).concat([PQ_EMAIL_OLD]);
+
+/** The email answer from a plate form response, under either title. */
+function plateEmailAnswer_(ans) { return ans[PQ.EMAIL] || ans[PQ_EMAIL_OLD] || ''; }
 
 /** The event's extra questions for its bring-a-plate form. */
 function plateExtras_(ev) { return parseExtraQuestions_(ev.extra, PLATE_TITLES); }
@@ -2443,8 +2448,14 @@ function buildPlateForm_(ev) {
   });
   props.setProperty(key, JSON.stringify(extraTitles));
 
-  ensureItem_(form, PQ.EMAIL, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(false)
-    .setHelpText('Only used to send you a confirmation and a reminder the day before.')
+  // Retitle an older "Email (optional)" question in place, so there's never a second email question.
+  const oldEmail = findItem_(form, PQ_EMAIL_OLD);
+  if (oldEmail) {
+    if (findItem_(form, PQ.EMAIL)) form.deleteItem(oldEmail);
+    else oldEmail.setTitle(PQ.EMAIL);
+  }
+  ensureItem_(form, PQ.EMAIL, FormApp.ItemType.TEXT, () => form.addTextItem()).asTextItem().setRequired(true)
+    .setHelpText('We\'ll send you a confirmation and a reminder the day before. Only the event coordinator and the P&C executive see it.')
     .setValidation(FormApp.createTextValidation().requireTextIsEmail().setHelpText('Please enter a valid email address, or leave it blank.').build());
   [PQ.FIRST, PQ.LAST, PQ.CATEGORY, PQ.ITEM].concat(ev.dietOptions.length ? [PQ.DIET] : []).concat(extraTitles).concat([PQ.EMAIL]).forEach((t, i) => {
     const it = findItem_(form, t);
@@ -2522,7 +2533,7 @@ function processPlateSubmit_(ev, ans, timestamp) {
   try {
     entry = cleanPlateEntry_({
       first: ans[PQ.FIRST], last: ans[PQ.LAST], category, item: ans[PQ.ITEM],
-      diets: String(ans[PQ.DIET] || '').split(','), extras, email: ans[PQ.EMAIL],
+      diets: String(ans[PQ.DIET] || '').split(','), extras, email: plateEmailAnswer_(ans),
     }, ev, category);
   } catch (e) {
     Logger.log(`Bring-a-plate response for ${ev.id} skipped: ${e && e.message}`);
